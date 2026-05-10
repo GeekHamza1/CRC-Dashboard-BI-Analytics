@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-start: #e0f2fe;
+  --bg-end: #eef2ff;
+  --glass: rgba(255, 255, 255, 0.74);
+}
+
+.dark :root {
+  --bg-start: #020617;
+  --bg-end: #0f172a;
+  --glass: rgba(15, 23, 42, 0.65);
+}
+
+html {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-gradient-to-br from-sky-50 via-white to-indigo-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300;
+}
+
+.glass-panel {
+  @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/50 dark:border-slate-700/80 shadow-xl shadow-slate-900/[0.08] dark:shadow-none rounded-3xl transition-all duration-300;
+}
+
+.chart-surface text {
+  @apply fill-current;
+}
+
+table.crc thead th {
+  @apply whitespace-nowrap;
+}
