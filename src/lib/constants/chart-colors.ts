@@ -3,8 +3,8 @@
  * Compatible avec Axilus CRC dynamique.
  */
 
+import { normalizeResult } from "../crc-normalize-result";
 import { NON_RENSEIGNE } from "../crc-constants";
-import { résultatBucket } from "../crc-analytics";
 
 /**
  * Couleurs OFFICIELLES des résultats connus.
@@ -102,7 +102,8 @@ export function compareResultBuckets(
 export function getResultColor(
   label: string,
 ): string {
-  const normalized = résultatBucket(label);
+  const trimmed = String(label ?? "").trim();
+  const normalized = trimmed ? normalizeResult(trimmed) : NON_RENSEIGNE;
 
   if (
     normalized &&

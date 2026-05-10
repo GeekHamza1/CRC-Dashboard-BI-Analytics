@@ -280,7 +280,7 @@ export function CrcTeleopStatsWidget(props: {
   return (
     <GlassShell
       title="Statistiques téléopérateurs"
-      subtitle="Colonnes issues du champ Résultat brut Axilus — contrôle colonnes & exports ci-dessous."
+      subtitle="Colonnes issues du résultat normalisé — contrôle colonnes & exports ci-dessous."
       toolbar={toolbar}
     >
       {chartPanel}

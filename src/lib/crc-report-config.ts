@@ -15,6 +15,7 @@ export type CrcTableKey = "pivotResult" | "pivotMetier" | "pivotNature" | "teleO
 export type CrcKpiKey =
   | "totalVolume"
   | "abandons"
+  | "decrochesInterrompus"
   | "informes"
   | "tickets"
   | "teleopsDistinct"
@@ -103,6 +104,7 @@ export const CRC_TABLE_KEYS = [
 export const CRC_KPI_KEYS = [
   "totalVolume",
   "abandons",
+  "decrochesInterrompus",
   "informes",
   "tickets",
   "teleopsDistinct",

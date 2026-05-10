@@ -6,7 +6,10 @@ import {
   REGION_SHORT,
   type CanonicalRegion,
 } from "./crc-constants";
+import { normalizeResult, normalizeResultKey } from "./crc-normalize-result";
 import type { CrcRow } from "./crc-types";
+
+export { CANONICAL_RESULT_LABELS, normalizeResult } from "./crc-normalize-result";
 
 export interface DashboardFilters {
   onlyValid: boolean;
@@ -30,12 +33,14 @@ function ymd(ts: Date) {
   return `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, "0")}-${String(ts.getDate()).padStart(2, "0")}`;
 }
 
-function nk(v: string) {
-  return (v || "")
-    .normalize("NFKD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim();
+/** Champs Excel vides / placeholders (ne pas compter comme renseignés). */
+export function isEmptyField(v: unknown): boolean {
+  if (v == null) return true;
+  const s = normalizeResultKey(String(v));
+  if (s === "") return true;
+  if (s === "-") return true;
+  if (s === normalizeResultKey(NON_RENSEIGNE)) return true;
+  return false;
 }
 
 type StatusClass =
@@ -45,53 +50,22 @@ type StatusClass =
   | "ticket_transmis"
   | "other";
 
-function classifyStatus(label: string): StatusClass {
-  const rawTrim = (label || "").trim();
-  const s = nk(rawTrim);
-  if (!s) return "other";
-
-  /** Match Axilus libellés on **raw/normalized strings** — ordre garantit distinction Abandon ≠ Appel abandonné */
-  const isTicket =
-    s === nk("Ticket Transmis") || (s.includes("ticket") && (s.includes("transmis") || s.includes("transfer")));
-  const isClientInformé =
-    s === nk("Le client Informé") ||
-    (s.includes("client") && (s.includes("inform") || s.includes("infor")));
-  const isAbandonPur =
-    s === nk("Abandon") || (s.endsWith("abandon") && !s.includes("appel") && !s.includes("appels"));
-  const isAppelAbandonne =
-    s === nk("Appel Abandonné") ||
-    s === nk("Appels Abandonnés") ||
-    (s.includes("appel") && s.includes("aband")) ||
-    (s.includes("decroch") && (s.includes("interrompu") || s.includes("interromp") || s.includes("interrupt")));
-
-  if (isTicket) return "ticket_transmis";
-  if (isClientInformé) return "client_informe";
-
-  /** Appel abandonné doit primer sur abandon large contenant « aband » mais sans « appel » */
-  if (isAppelAbandonne && !isAbandonPur) return "appel_abandonne";
-  if (isAbandonPur) return "abandon";
-
-  if (s === nk("Abandon") || (!s.includes("appel") && !s.includes("appels") && s.includes("aband"))) {
-    return "abandon";
-  }
+/** Famille KPI / agrégations — dérivée de `normalizeResult` uniquement. */
+export function classifyStatus(label: string): StatusClass {
+  const canon = normalizeResult(label ?? "");
+  if (canon === "Appels abandonnés") return "abandon";
+  if (canon === "Appels décrochés interrompus") return "appel_abandonne";
+  if (canon === "Clients informés") return "client_informe";
+  if (canon === "Tickets transmis") return "ticket_transmis";
   return "other";
 }
 
-const STATUS_LABELS: Record<StatusClass, string> = {
-  abandon: "Appels abandonnés",
-  appel_abandonne: "Appels décrochés interrompus",
-  client_informe: "Clients informés",
-  ticket_transmis: "Tickets transmis",
-  other: NON_RENSEIGNE,
-};
-
-/** Dynamic bucket with pattern-based normalization, no strict equals dependency. */
-export function résultatBucket(label: string) {
-  const raw = (label || "").trim();
+/** Libellé bucket agrégé (synonymes Axilus + libellés dashboard → canoniques). */
+export function résultatBucket(label: string): string {
+  const raw = String(label ?? "").trim();
   if (!raw) return NON_RENSEIGNE;
-  const klass = classifyStatus(raw);
-  if (klass === "other") return raw;
-  return STATUS_LABELS[klass];
+  const n = normalizeResult(raw);
+  return n || NON_RENSEIGNE;
 }
 
 /** Keep every row identity; filter out only excluded by UI state */
@@ -100,7 +74,11 @@ export function applyFilters(rows: CrcRow[], f: DashboardFilters): CrcRow[] {
     if (f.onlyValid && !r.valid) return false;
     if (!f.régions.includes(r.régionCanon)) return false;
     if (f.téléopérateurs.length && !f.téléopérateurs.includes(r.téléopérateur)) return false;
-    if (f.résultats.length && !f.résultats.includes(r.résultat)) return false;
+    if (f.résultats.length) {
+      const rowCanon = r.résultat;
+      const keep = f.résultats.some((sel) => normalizeResult(sel) === rowCanon);
+      if (!keep) return false;
+    }
     if (r.date) {
       const d = ymd(r.date);
       if (f.dateFrom && d < f.dateFrom) return false;
@@ -121,6 +99,9 @@ export function countMap(keys: string[]) {
 
 export function globalKpis(rows: CrcRow[]) {
   const abandons = rows.filter((r) => classifyStatus(r.résultat) === "abandon").length;
+  const appelsDecrochesInterrompus = rows.filter(
+    (r) => classifyStatus(r.résultat) === "appel_abandonne",
+  ).length;
   const informés = rows.filter((r) => classifyStatus(r.résultat) === "client_informe").length;
   const tickets = rows.filter((r) => classifyStatus(r.résultat) === "ticket_transmis").length;
   return {
@@ -128,6 +109,7 @@ export function globalKpis(rows: CrcRow[]) {
     réclamations: rows.length,
     totalAppels: rows.length,
     appelsAbandonnés: abandons,
+    appelsDécrochésInterrompus: appelsDecrochesInterrompus,
     clientsInformés: informés,
     ticketsTransmis: tickets,
     appelsParRégion: countMap(rows.map((r) => r.régionCanon)),
@@ -143,7 +125,7 @@ export function pivotRésultatParRégion(rows: CrcRow[]) {
     "Clients informés",
     "Tickets transmis",
   ];
-  const keys = [...new Set(rows.map((r) => résultatBucket(r.résultat)))];
+  const keys = [...new Set(rows.map((r) => r.résultat))];
   keys.sort((a, b) => {
     const ia = order.indexOf(a);
     const ib = order.indexOf(b);
@@ -160,7 +142,7 @@ export function pivotRésultatParRégion(rows: CrcRow[]) {
     >;
   });
   rows.forEach((r) => {
-    const rk = résultatBucket(r.résultat);
+    const rk = r.résultat;
     matrix[rk] ??= Object.fromEntries(REGION_ORDER.map((x) => [REGION_SHORT[x], 0])) as Record<
       string,
       number
@@ -273,7 +255,7 @@ export function regionSlice(rows: CrcRow[], region: CanonicalRegion) {
   const slice = rows.filter((r) => r.régionCanon === region);
   return {
     total: slice.length,
-    résultat: [...countMap(slice.map((r) => résultatBucket(r.résultat))).entries()].sort(
+    résultat: [...countMap(slice.map((r) => r.résultat)).entries()].sort(
       (a, b) => b[1] - a[1],
     ),
     métier: [...countMap(slice.map((r) => r.metier)).entries()].sort((a, b) => b[1] - a[1]),

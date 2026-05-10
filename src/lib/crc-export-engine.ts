@@ -432,3 +432,100 @@ export function exportRegionResultBarExcel(regionTitle: string, chartRows: Regio
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(json), regionTitle.slice(0, 28));
   XLSX.writeFile(wb, `${sanitizeBase(basename)}.xlsx`);
 }
+
+export type InvestigationColumnKey =
+  | "datetime"
+  | "teleop"
+  | "resultat"
+  | "metier"
+  | "region"
+  | "phone"
+  | "nature";
+
+const INVESTIGATION_COL_LABEL: Record<InvestigationColumnKey, string> = {
+  datetime: "Date + Heure",
+  teleop: "Téléopérateur",
+  resultat: "Résultat brut Excel",
+  metier: "Métier",
+  region: "Région",
+  phone: "Téléphone",
+  nature: "Nature de réclamation",
+};
+
+function investigationCell(r: CrcRow, key: InvestigationColumnKey): string {
+  if (key === "datetime") {
+    return r.date
+      ? `${r.date.toLocaleDateString("fr-FR")} à ${r.date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+      : "";
+  }
+  if (key === "teleop") return r.téléopérateur;
+  if (key === "resultat") return r.résultatRaw;
+  if (key === "metier") return r.metier;
+  if (key === "region") return r.régionCanon;
+  if (key === "phone") return r.téléphone;
+  return r.natureRéclamation;
+}
+
+export function exportInvestigationExcel(rows: CrcRow[], cols: InvestigationColumnKey[], basename: string) {
+  const wb = XLSX.utils.book_new();
+  const json = rows.map((r) =>
+    Object.fromEntries(cols.map((c) => [INVESTIGATION_COL_LABEL[c], investigationCell(r, c)])),
+  );
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(json), "Investigation");
+  XLSX.writeFile(wb, `${sanitizeBase(basename)}.xlsx`);
+}
+
+export async function exportInvestigationPdf(
+  title: string,
+  rows: CrcRow[],
+  cols: InvestigationColumnKey[],
+  basename: string,
+) {
+  const logo = await resolveReportLogo(null);
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  doc.setFillColor(249, 115, 22);
+  doc.roundedRect(8, 8, 280, 14, 2, 2, "F");
+  if (logo) {
+    try {
+      doc.addImage(logo, "PNG", 10, 8, 14, 12);
+    } catch {}
+  }
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.text(title, 28, 16);
+  autoTable(doc, {
+    head: [cols.map((c) => INVESTIGATION_COL_LABEL[c])],
+    body: rows.map((r) => cols.map((c) => investigationCell(r, c))),
+    startY: 26,
+    styles: { fontSize: 7.5 },
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+  });
+  doc.save(`${sanitizeBase(basename)}.pdf`);
+}
+
+export async function exportInvestigationPptx(
+  title: string,
+  rows: CrcRow[],
+  cols: InvestigationColumnKey[],
+  basename: string,
+) {
+  const logo = await resolveReportLogo(null);
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE";
+  const slide = pptx.addSlide();
+  slide.background = { color: "fff7ed" };
+  slide.addShape("rect", { x: 0, y: 0, w: "100%", h: 0.65, fill: { color: "f97316" }, line: { color: "f97316", pt: 0 } });
+  if (logo) {
+    try {
+      slide.addImage({ data: logo, x: 0.35, y: 0.1, w: 0.65, h: 0.48 });
+    } catch {}
+  }
+  slide.addText(title, { x: 1.15, y: 0.18, fontSize: 14, bold: true, color: "FFFFFF" });
+  const head = cols.map((c) => ({
+    text: INVESTIGATION_COL_LABEL[c],
+    options: { bold: true, fill: { color: "334155" }, color: "FFFFFF" },
+  }));
+  const body = rows.slice(0, 28).map((r) => cols.map((c) => ({ text: investigationCell(r, c) })));
+  slide.addTable([head, ...body] as never, { x: 0.35, y: 0.85, w: 12.5, fontSize: 7 });
+  await pptx.writeFile({ fileName: `${sanitizeBase(basename)}.pptx` });
+}

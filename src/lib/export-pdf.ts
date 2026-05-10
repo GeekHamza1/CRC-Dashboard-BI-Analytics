@@ -197,7 +197,7 @@ export async function exportCrcPdf(
   const teleKeys = activeTeleOpKeys(cv?.teleOpMetrics);
   const subtitle =
     opts?.subtitle?.trim() ||
-    `CRC opérationnel • ${rows.length} interactions Axilus (libellés Résultat bruts agrégés par familles)`;
+    `CRC opérationnel • ${rows.length} interactions Axilus (résultats normalisés à l’import)`;
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   drawHeaderBand(doc, title, subtitle, logoDataUrl);
@@ -399,7 +399,7 @@ export async function exportCrcPdf(
     drawHeaderBand(
       doc,
       "Statistiques des Téléopérateurs",
-      "Colonnes depuis le champ Résultat brut Axilus — Abandon / Appel abandonné / Clients informés / Tickets",
+      "Colonnes depuis le champ Résultat (normalisé) — familles Appels abandonnés / décrochés / informés / tickets",
       logoDataUrl,
     );
 
@@ -464,7 +464,7 @@ export async function exportCrcPdf(
       },
       foot: [
         [
-          "* Agrégats basés sur le texte brut Résultat (Axilus)",
+          "* Agrégats basés sur le résultat normalisé (import)",
           ...Array(Math.max(0, teleHead.length - 1)).fill(""),
         ],
       ],

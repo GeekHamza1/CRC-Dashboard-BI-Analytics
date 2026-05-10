@@ -93,8 +93,42 @@ export function CrcRawPreviewWidget(props: {
   const [colsOpen, setColsOpen] = useState(false);
   const [chartOpen, setChartOpen] = useState(false);
   const [chartKind, setChartKind] = useState<PivotChartKind>("bar");
+  const [rowsLimit, setRowsLimit] = useState<number | "ALL">(200);
+  const [dateMin, setDateMin] = useState("");
+  const [dateMax, setDateMax] = useState("");
+  const [query, setQuery] = useState("");
   const chartRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      const ymd = r.date
+        ? `${r.date.getFullYear()}-${String(r.date.getMonth() + 1).padStart(2, "0")}-${String(r.date.getDate()).padStart(2, "0")}`
+        : "";
+      if (dateMin && (!ymd || ymd < dateMin)) return false;
+      if (dateMax && (!ymd || ymd > dateMax)) return false;
+      if (!q) return true;
+      return [
+        r.résultat,
+        r.résultatRaw,
+        r.téléopérateur,
+        r.metier,
+        r.natureRéclamation,
+        r.regions,
+        r.régionCanon,
+        r.téléphone,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [rows, dateMin, dateMax, query]);
+
+  const visibleRows = useMemo(
+    () => (rowsLimit === "ALL" ? filteredRows : filteredRows.slice(0, rowsLimit)),
+    [filteredRows, rowsLimit],
+  );
 
   const regionChartRows = useMemo(
     () =>
@@ -166,7 +200,7 @@ export function CrcRawPreviewWidget(props: {
         type="button"
         disabled={!keys.length}
         className="rounded-full px-3 py-2 text-[11px] font-semibold border border-slate-200 dark:border-slate-600 disabled:opacity-40"
-        onClick={() => void exportRawPreviewPdf(rows, keys, headers, `${exportBasename}_raw`)}
+        onClick={() => void exportRawPreviewPdf(filteredRows, keys, headers, `${exportBasename}_raw`)}
       >
         PDF
       </button>
@@ -174,7 +208,7 @@ export function CrcRawPreviewWidget(props: {
         type="button"
         disabled={!keys.length}
         className="rounded-full px-3 py-2 text-[11px] font-semibold border border-slate-200 dark:border-slate-600 disabled:opacity-40"
-        onClick={() => void exportRawPreviewPptx(rows, keys, headers, `${exportBasename}_raw`)}
+        onClick={() => void exportRawPreviewPptx(filteredRows, keys, headers, `${exportBasename}_raw`)}
       >
         PPTX
       </button>
@@ -182,7 +216,7 @@ export function CrcRawPreviewWidget(props: {
         type="button"
         disabled={!keys.length}
         className="rounded-full px-3 py-2 text-[11px] font-semibold border border-slate-200 dark:border-slate-600 disabled:opacity-40"
-        onClick={() => exportRawPreviewExcel(rows, keys, headers, `${exportBasename}_raw`)}
+        onClick={() => exportRawPreviewExcel(filteredRows, keys, headers, `${exportBasename}_raw`)}
       >
         Excel
       </button>
@@ -284,6 +318,40 @@ export function CrcRawPreviewWidget(props: {
       toolbar={toolbar}
     >
       {chartPanel}
+      <div className="mb-3 flex flex-wrap gap-2 items-center">
+        <select
+          className="rounded-xl border px-3 py-1.5 text-xs bg-white/80 dark:bg-slate-900/70 dark:border-slate-600"
+          value={String(rowsLimit)}
+          onChange={(e) => setRowsLimit(e.target.value === "ALL" ? "ALL" : Number(e.target.value))}
+        >
+          {[100, 200, 500, 1000].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+          <option value="ALL">ALL</option>
+        </select>
+        <input
+          type="date"
+          value={dateMin}
+          onChange={(e) => setDateMin(e.target.value)}
+          className="rounded-xl border px-3 py-1.5 text-xs bg-white/80 dark:bg-slate-900/70 dark:border-slate-600"
+        />
+        <input
+          type="date"
+          value={dateMax}
+          onChange={(e) => setDateMax(e.target.value)}
+          className="rounded-xl border px-3 py-1.5 text-xs bg-white/80 dark:bg-slate-900/70 dark:border-slate-600"
+        />
+        <input
+          type="search"
+          placeholder="Recherche globale..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="min-w-[220px] rounded-xl border px-3 py-1.5 text-xs bg-white/80 dark:bg-slate-900/70 dark:border-slate-600"
+        />
+        <span className="text-xs text-slate-500">{filteredRows.length} lignes filtrées</span>
+      </div>
       {!visibleDefs.length ? (
         <p className="text-sm text-slate-500">Activez au moins une colonne (bouton Colonnes).</p>
       ) : (
@@ -305,7 +373,7 @@ export function CrcRawPreviewWidget(props: {
               </tr>
             </thead>
             <tbody>
-              {rows.slice(0, 200).map((r, i) => (
+              {visibleRows.map((r, i) => (
                 <tr key={`${r.rawIndex}-${i}`}>
                   {visibleDefs.map((col) => (
                     <td

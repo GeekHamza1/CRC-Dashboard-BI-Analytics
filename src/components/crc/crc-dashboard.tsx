@@ -23,15 +23,16 @@ import {
 import {
   applyFilters,
   chartSemanticPalette,
+  classifyStatus,
   dailySeries,
   defaultDashboardFilters,
   globalKpis,
+  isEmptyField,
   monthlySeries,
   operatorRanking,
   pivotMétierParRégion,
   pivotNatureParRégion,
   pivotRésultatParRégion,
-  résultatBucket,
   type DashboardFilters,
 } from "@/lib/crc-analytics";
 import {
@@ -68,6 +69,12 @@ import { CrcRegionResultCardWidget } from "@/components/crc/crc-region-result-ca
 import { CrcRawPreviewWidget } from "@/components/crc/crc-raw-preview-widget";
 import { CrcTeleopStatsWidget } from "@/components/crc/crc-teleop-stats-widget";
 import { captureRefToDataUrl } from "@/lib/crc-export-engine";
+import {
+  exportInvestigationExcel,
+  exportInvestigationPdf,
+  exportInvestigationPptx,
+  type InvestigationColumnKey,
+} from "@/lib/crc-export-engine";
 import {
   defaultCrcColumnVisibility,
   type CrcColumnVisibilityState,
@@ -115,6 +122,21 @@ function GlassCard({
       {children}
     </section>
   );
+}
+
+const INVESTIGATION_COLS: InvestigationColumnKey[] = [
+  "datetime",
+  "teleop",
+  "resultat",
+  "metier",
+  "region",
+  "phone",
+  "nature",
+];
+
+function formatDateTime(d: Date | null) {
+  if (!d) return "";
+  return `${d.toLocaleDateString("fr-FR")} à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function parseMulti(select: HTMLSelectElement) {
@@ -172,7 +194,8 @@ const PPTX_BLOCK_LABELS: { id: PptxSlideKey; label: string }[] = [
 
 const KPI_LABEL_FR: Record<CrcKpiKey, string> = {
   totalVolume: "Total interactions",
-  abandons: "Appels abandonnés (familles abandon)",
+  abandons: "Appels abandonnés",
+  decrochesInterrompus: "Appels décrochés interrompus",
   informes: "Clients informés",
   tickets: "Tickets transmis",
   teleopsDistinct: "Téléopérateurs actifs",
@@ -197,7 +220,7 @@ const RAW_PREVIEW_COLUMNS: {
     label: "Résultat (Excel)",
     cell: (r) => (
       <span className="font-semibold" style={{ color: getResultColor(r.résultat) }}>
-        {r.résultat}
+        {r.résultatRaw || "—"}
       </span>
     ),
   },
@@ -409,6 +432,34 @@ export default function CrcDashboard() {
     [sourceLabel],
   );
 
+  const [detailKpi, setDetailKpi] = useState<null | "abandons" | "decroches" | "informes" | "tickets">(null);
+  const [detailRegions, setDetailRegions] = useState<Record<string, boolean>>(
+    Object.fromEntries(REGION_ORDER.map((r) => [r, true])),
+  );
+  const [fauxPage, setFauxPage] = useState(1);
+
+  const fauxTraitementsRows = useMemo(
+    () => filteredRows.filter((r) => isEmptyField(r.regions) || isEmptyField(r.metier)),
+    [filteredRows],
+  );
+  const fauxPerPage = 25;
+  const fauxPaged = useMemo(
+    () => fauxTraitementsRows.slice((fauxPage - 1) * fauxPerPage, fauxPage * fauxPerPage),
+    [fauxTraitementsRows, fauxPage],
+  );
+
+  const detailRows = useMemo(() => {
+    if (!detailKpi) return [] as CrcRow[];
+    const byKpi = filteredRows.filter((r) => {
+      const st = classifyStatus(r.résultat);
+      if (detailKpi === "abandons") return st === "abandon";
+      if (detailKpi === "decroches") return st === "appel_abandonne";
+      if (detailKpi === "informes") return st === "client_informe";
+      return st === "ticket_transmis";
+    });
+    return byKpi.filter((r) => detailRegions[r.régionCanon] !== false);
+  }, [detailKpi, filteredRows, detailRegions]);
+
 const chartTooltip = (
   <Tooltip
     contentStyle={{
@@ -442,7 +493,7 @@ const chartTooltip = (
   }));
 
   const résultatPieData = useMemo(() => {
-    const buckets = filteredRows.map((r) => résultatBucket(r.résultat));
+    const buckets = filteredRows.map((r) => r.résultat);
     const uniq = [...new Set(buckets)].sort(compareResultBuckets);
     return uniq
       .map((name) => ({
@@ -484,20 +535,25 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
       {
         key: "abandons",
         title: KPI_LABEL_FR.abandons,
-        subtitle:
-          "Compte les libellés bruts Axilus « Abandon » + agrégats « Appel abandonné » (voir analytique CRC).",
+        subtitle: "Lignes dont le résultat normalisé est « Appels abandonnés ».",
         body: kpis.appelsAbandonnés,
+      },
+      {
+        key: "decrochesInterrompus",
+        title: KPI_LABEL_FR.decrochesInterrompus,
+        subtitle: "Lignes dont le résultat normalisé est « Appels décrochés interrompus ».",
+        body: kpis.appelsDécrochésInterrompus,
       },
       {
         key: "informes",
         title: KPI_LABEL_FR.informes,
-        subtitle: "Famille « Le client Informé » détectée sur le texte brut Résultat.",
+        subtitle: "Lignes dont le résultat normalisé est « Clients informés ».",
         body: kpis.clientsInformés,
       },
       {
         key: "tickets",
         title: KPI_LABEL_FR.tickets,
-        subtitle: "Famille « Ticket Transmis » détectée sur le texte brut Résultat.",
+        subtitle: "Lignes dont le résultat normalisé est « Tickets transmis ».",
         body: kpis.ticketsTransmis,
       },
       {
@@ -910,21 +966,19 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
         </h2>
         <ul className="grid sm:grid-cols-2 gap-3 text-sm text-slate-900 dark:text-slate-50">
           <li>
-            <span className="font-semibold text-orange-700 dark:text-orange-200">Abandon</span>
+            <span className="font-semibold text-orange-700 dark:text-orange-200">Appels abandonnés</span>
             {' — '}appel entré mais aucune prise téléconseiller.
           </li>
           <li>
-            <span className="font-semibold text-orange-700 dark:text-orange-200">Appel abandonné</span>
+            <span className="font-semibold text-orange-700 dark:text-orange-200">Appels décrochés interrompus</span>
             {' — '}liaison coupée alors que la file était active.
           </li>
           <li>
-            <span className="font-semibold text-emerald-700 dark:text-emerald-200">
-              Le client informé
-            </span>
+            <span className="font-semibold text-emerald-700 dark:text-emerald-200">Clients informés</span>
             {' — '}résolution informationnelle constatée.
           </li>
           <li>
-            <span className="font-semibold text-purple-700 dark:text-purple-200">Ticket transmis</span>
+            <span className="font-semibold text-purple-700 dark:text-purple-200">Tickets transmis</span>
             {' — '}transfert officiel dans le workflow back-office ou partenaires.
           </li>
         </ul>
@@ -1045,7 +1099,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400">
-                    Résultat brut
+                    Résultat (normalisé)
                   </span>
                   <select
                     multiple
@@ -1071,13 +1125,41 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
           {kpiTiles.length ? (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {kpiTiles.map((tile) => (
-                <GlassCard key={tile.key} title={tile.title} subtitle={tile.subtitle}>
-                  <div className="text-4xl font-bold tabular-nums text-indigo-600 dark:text-indigo-300 mt-2">
-                    {tile.body}
-                  </div>
-                </GlassCard>
-              ))}
+              {kpiTiles.map((tile) => {
+                const clickable = ["abandons", "decrochesInterrompus", "informes", "tickets"].includes(tile.key);
+                return (
+                  <GlassCard
+                    key={tile.key}
+                    title={tile.title}
+                    subtitle={tile.subtitle}
+                    action={
+                      clickable ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDetailKpi(
+                              tile.key === "abandons"
+                                ? "abandons"
+                                : tile.key === "decrochesInterrompus"
+                                  ? "decroches"
+                                  : tile.key === "informes"
+                                    ? "informes"
+                                    : "tickets",
+                            )
+                          }
+                          className="rounded-full px-3 py-1 text-[11px] font-semibold border border-slate-300 dark:border-slate-600"
+                        >
+                          Détails
+                        </button>
+                      ) : null
+                    }
+                  >
+                    <div className="text-4xl font-bold tabular-nums text-indigo-600 dark:text-indigo-300 mt-2">
+                      {tile.body}
+                    </div>
+                  </GlassCard>
+                );
+              })}
             </div>
           ) : null}
 
@@ -1213,7 +1295,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             <CrcRegionPivotWidget
               widgetId="pivotResult"
               title="1. Pivot Résultat × Régions"
-              subtitle="Colonnes géographiques Drâa • Laâyoune • Souss • Faux appels · familles depuis le champ Résultat brut Axilus."
+              subtitle="Colonnes géographiques Drâa • Laâyoune • Souss • Faux appels · familles depuis le résultat normalisé."
               labelHeader="Résultat"
               rowLabelKey="name"
               rows={pivotResult}
@@ -1351,6 +1433,190 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
         </>
       )}
 
+      {rows.length > 0 ? (
+        <GlassCard
+          title="Faux traitements"
+          subtitle="Lignes avec Région vide ou Métier vide (investigation opérationnelle)."
+          action={
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded-full px-3 py-1 text-[11px] font-semibold border border-slate-300 dark:border-slate-600"
+                onClick={() =>
+                  exportInvestigationExcel(fauxTraitementsRows, INVESTIGATION_COLS, `${exportFileBase}_faux_traitements`)
+                }
+              >
+                Excel
+              </button>
+              <button
+                type="button"
+                className="rounded-full px-3 py-1 text-[11px] font-semibold border border-slate-300 dark:border-slate-600"
+                onClick={() =>
+                  void exportInvestigationPdf(
+                    "Faux traitements",
+                    fauxTraitementsRows,
+                    INVESTIGATION_COLS,
+                    `${exportFileBase}_faux_traitements`,
+                  )
+                }
+              >
+                PDF
+              </button>
+              <button
+                type="button"
+                className="rounded-full px-3 py-1 text-[11px] font-semibold border border-slate-300 dark:border-slate-600"
+                onClick={() =>
+                  void exportInvestigationPptx(
+                    "Faux traitements",
+                    fauxTraitementsRows,
+                    INVESTIGATION_COLS,
+                    `${exportFileBase}_faux_traitements`,
+                  )
+                }
+              >
+                PPTX
+              </button>
+            </div>
+          }
+        >
+          <div className="overflow-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+            <table className="min-w-[980px] w-full text-xs">
+              <thead className="bg-slate-900 text-white">
+                <tr>
+                  {["Date + Heure", "Téléopérateur", "Résultat", "Région", "Métier", "Nature", "Téléphone"].map((h) => (
+                    <th key={h} className="px-2 py-2 text-left whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {fauxPaged.map((r, i) => (
+                  <tr key={`${r.rawIndex}-${i}`} className={i % 2 ? "bg-slate-50 dark:bg-slate-900/50" : ""}>
+                    <td className="px-2 py-1">{formatDateTime(r.date)}</td>
+                    <td className="px-2 py-1">{r.téléopérateur}</td>
+                    <td className="px-2 py-1">{r.résultat}</td>
+                    <td className="px-2 py-1">{REGION_SHORT[r.régionCanon]}</td>
+                    <td className="px-2 py-1">{r.metier}</td>
+                    <td className="px-2 py-1">{r.natureRéclamation}</td>
+                    <td className="px-2 py-1 font-mono">{r.téléphone}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              disabled={fauxPage <= 1}
+              onClick={() => setFauxPage((p) => Math.max(1, p - 1))}
+              className="rounded-full px-3 py-1 text-[11px] border border-slate-300 disabled:opacity-40"
+            >
+              Précédent
+            </button>
+            <span className="text-xs text-slate-500">
+              Page {fauxPage} / {Math.max(1, Math.ceil(fauxTraitementsRows.length / fauxPerPage))}
+            </span>
+            <button
+              type="button"
+              disabled={fauxPage >= Math.ceil(Math.max(1, fauxTraitementsRows.length) / fauxPerPage)}
+              onClick={() =>
+                setFauxPage((p) => Math.min(Math.max(1, Math.ceil(fauxTraitementsRows.length / fauxPerPage)), p + 1))
+              }
+              className="rounded-full px-3 py-1 text-[11px] border border-slate-300 disabled:opacity-40"
+            >
+              Suivant
+            </button>
+          </div>
+        </GlassCard>
+      ) : null}
+
+      {detailKpi ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm p-4 overflow-auto">
+          <div className="max-w-[1400px] mx-auto mt-8 glass-panel p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                Détail KPI — {detailKpi === "abandons" ? "Appels abandonnés" : detailKpi === "decroches" ? "Appels décrochés interrompus" : detailKpi === "informes" ? "Clients informés" : "Tickets transmis"}
+              </h3>
+              <button type="button" onClick={() => setDetailKpi(null)} className="rounded-full px-3 py-1 border border-slate-300">
+                Fermer
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-3 mb-3 items-center">
+              {REGION_ORDER.map((rg) => (
+                <label key={rg} className="text-xs inline-flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={detailRegions[rg] !== false}
+                    onChange={() => setDetailRegions((s) => ({ ...s, [rg]: !(s[rg] !== false) }))}
+                  />
+                  <span style={{ color: REGION_COLORS[rg] }}>{REGION_SHORT[rg]}</span>
+                </label>
+              ))}
+              <button
+                type="button"
+                className="rounded-full px-3 py-1 text-[11px] border border-slate-300"
+                onClick={() => exportInvestigationExcel(detailRows, INVESTIGATION_COLS, `${exportFileBase}_detail_${detailKpi}`)}
+              >
+                Export Excel
+              </button>
+              <button
+                type="button"
+                className="rounded-full px-3 py-1 text-[11px] border border-slate-300"
+                onClick={() =>
+                  void exportInvestigationPdf(
+                    `Détail KPI ${detailKpi}`,
+                    detailRows,
+                    INVESTIGATION_COLS,
+                    `${exportFileBase}_detail_${detailKpi}`,
+                  )
+                }
+              >
+                Export PDF
+              </button>
+              <button
+                type="button"
+                className="rounded-full px-3 py-1 text-[11px] border border-slate-300"
+                onClick={() =>
+                  void exportInvestigationPptx(
+                    `Détail KPI ${detailKpi}`,
+                    detailRows,
+                    INVESTIGATION_COLS,
+                    `${exportFileBase}_detail_${detailKpi}`,
+                  )
+                }
+              >
+                Export PPTX
+              </button>
+            </div>
+            <div className="max-h-[65vh] overflow-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+              <table className="min-w-[1100px] w-full text-xs">
+                <thead className="bg-slate-900 text-white sticky top-0">
+                  <tr>
+                    {["Date + Heure", "Téléopérateur", "Résultat brut Excel", "Métier", "Région", "Téléphone", "Nature de réclamation"].map((h) => (
+                      <th key={h} className="px-2 py-2 text-left whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailRows.map((r, i) => (
+                    <tr key={`${r.rawIndex}-${i}`} className={i % 2 ? "bg-slate-50 dark:bg-slate-900/50" : ""}>
+                      <td className="px-2 py-1">{formatDateTime(r.date)}</td>
+                      <td className="px-2 py-1">{r.téléopérateur}</td>
+                      <td className="px-2 py-1">{r.résultat}</td>
+                      <td className="px-2 py-1">{r.metier}</td>
+                      <td className="px-2 py-1">{REGION_SHORT[r.régionCanon]}</td>
+                      <td className="px-2 py-1 font-mono">{r.téléphone}</td>
+                      <td className="px-2 py-1">{r.natureRéclamation}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {debugOpen && (
         <GlassCard title="Mode développeur — Parsing Axilus">
           {!debug ? (
@@ -1387,6 +1653,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       motif: r.validationReason ?? null,
                       date: r.date ? r.date.toISOString() : null,
                       résultat: r.résultat,
+                      résultatRaw: r.résultatRaw,
                       régionCanon: r.régionCanon,
                       téléopérateur: r.téléopérateur,
                     })),

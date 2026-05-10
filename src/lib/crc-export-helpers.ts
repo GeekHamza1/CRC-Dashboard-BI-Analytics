@@ -113,7 +113,7 @@ export function formatRawCellForExport(r: CrcRow, key: RawColumnKey): string {
     case "date":
       return r.date ? r.date.toLocaleDateString("fr-FR") : "";
     case "resultatRaw":
-      return r.résultat;
+      return r.résultatRaw;
     case "teleop":
       return r.téléopérateur;
     case "metier":

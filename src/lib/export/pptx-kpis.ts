@@ -8,6 +8,7 @@ import { KPI_CARD, PPTX_CRC } from "./pptx-theme";
 const KPI_LABEL: Record<CrcKpiKey, string> = {
   totalVolume: "Total interactions",
   abandons: "Appels abandonnés",
+  decrochesInterrompus: "Appels décrochés interrompus",
   informes: "Clients informés",
   tickets: "Tickets transmis",
   teleopsDistinct: "Téléopérateurs actifs",
@@ -80,6 +81,7 @@ export function buildKpiItems(
     totalAppels: number;
     réclamations: number;
     appelsAbandonnés: number;
+    appelsDécrochésInterrompus: number;
     clientsInformés: number;
     ticketsTransmis: number;
   },
@@ -91,6 +93,7 @@ export function buildKpiItems(
   const map: Partial<Record<CrcKpiKey, string>> = {
     totalVolume: `${k.totalAppels.toLocaleString("fr-FR")}`,
     abandons: `${k.appelsAbandonnés.toLocaleString("fr-FR")}`,
+    decrochesInterrompus: `${k.appelsDécrochésInterrompus.toLocaleString("fr-FR")}`,
     informes: `${k.clientsInformés.toLocaleString("fr-FR")}`,
     tickets: `${k.ticketsTransmis.toLocaleString("fr-FR")}`,
     teleopsDistinct: `${distinctOps}`,

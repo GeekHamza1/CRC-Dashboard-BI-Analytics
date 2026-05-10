@@ -14,7 +14,13 @@ export interface CrcRow {
   date: Date | null;
   moisLabel: string;
   téléopérateur: string;
+  /**
+   * Libellé Résultat **canonique** (normalisé à l’import via `normalizeResult`).
+   * Toutes agrégations / filtres / graphes utilisent ce champ.
+   */
   résultat: string;
+  /** Valeur Excel brute (colonne Résultat), inchangée pour audit / colonne « Excel ». */
+  résultatRaw: string;
   tempsAttente: string;
   tempsAttenteIvr: string;
   tempsAttenteQueue: string;

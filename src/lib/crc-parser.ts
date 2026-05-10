@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { normalizeResult } from "./crc-normalize-result";
 import {
   FAUX_APPELS,
   NON_RENSEIGNE,
@@ -389,6 +390,12 @@ export function parseWorkbook(wb: XLSX.WorkBook, fileHintName = ""): ParseResult
     if (valid) validRows++;
     else invalidRows++;
 
+    const résultatTrim = rec.résultat.trim();
+    const résultatRaw = résultatTrim;
+    const résultatNormalized = !résultatTrim
+      ? NON_RENSEIGNE
+      : normalizeResult(résultatTrim) || NON_RENSEIGNE;
+
     const rowOut: CrcRow = {
       rawIndex: r,
       valid,
@@ -400,7 +407,8 @@ export function parseWorkbook(wb: XLSX.WorkBook, fileHintName = ""): ParseResult
       date: parsedDate,
       moisLabel: moisLabel || NON_RENSEIGNE,
       téléopérateur: emptyFallback(rec.téléopérateur, false),
-      résultat: emptyFallback(rec.résultat, false),
+      résultat: résultatNormalized,
+      résultatRaw,
       tempsAttente: emptyFallback(rec.tempsAttente, false),
       tempsAttenteIvr: emptyFallback(rec.tempsAttenteIvr, false),
       tempsAttenteQueue: emptyFallback(rec.tempsAttenteQueue, false),

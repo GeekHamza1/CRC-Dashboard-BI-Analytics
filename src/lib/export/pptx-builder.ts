@@ -323,14 +323,14 @@ export async function buildAndSaveCrcPptx(
 
     defs.addText(
       [
-        { text: "Abandon", options: { bold: true, color: hexForPptx(RESULT_COLORS["Appels abandonnés"]) } },
-        { text: " → libellé Axilus « Abandon ».\n" },
-        { text: "Appel abandonné", options: { bold: true, color: hexForPptx(RESULT_COLORS["Appels décrochés interrompus"]) } },
-        { text: " → décrochet / interruption.\n" },
+        { text: "Appels abandonnés", options: { bold: true, color: hexForPptx(RESULT_COLORS["Appels abandonnés"]) } },
+        { text: " — appel sans prise en charge.\n" },
+        { text: "Appels décrochés interrompus", options: { bold: true, color: hexForPptx(RESULT_COLORS["Appels décrochés interrompus"]) } },
+        { text: " — file active, liaison coupée.\n" },
         { text: "Clients informés", options: { bold: true, color: hexForPptx(RESULT_COLORS["Clients informés"]) } },
-        { text: " → information donnée.\n" },
+        { text: " — information donnée.\n" },
         { text: "Tickets transmis", options: { bold: true, color: hexForPptx(RESULT_COLORS["Tickets transmis"]) } },
-        { text: " → escalade dossier." },
+        { text: " — escalade dossier." },
       ],
       { x: 0.75, y: 1.2, w: 11.5, h: 2.4, fontSize: 12, color: PPTX_CRC.navy },
     );

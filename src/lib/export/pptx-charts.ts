@@ -1,7 +1,6 @@
 import type PptxGenJS from "pptxgenjs";
 
 import { AGGREGATE_VOLUME_BAR, compareResultBuckets, getResultColor, hexForPptx } from "../constants/chart-colors";
-import { résultatBucket } from "../crc-analytics";
 import { REGION_COLORS, REGION_ORDER, REGION_SHORT } from "../crc-constants";
 import { numericValue, type PivotRegionRow } from "../crc-export-helpers";
 
@@ -247,7 +246,7 @@ export function addResultDistributionBarChart(
 
 /** Build résultat bucket pie data (same logic as dashboard). */
 export function buildRésultatPieSeries(rows: { résultat: string }[]) {
-  const buckets = rows.map((r) => résultatBucket(r.résultat));
+  const buckets = rows.map((r) => r.résultat);
   const uniq = [...new Set(buckets)].sort(compareResultBuckets);
   const names = uniq.filter((n) => buckets.filter((x) => x === n).length > 0);
   const values = names.map((name) => buckets.filter((x) => x === name).length);
