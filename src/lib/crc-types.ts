@@ -1,4 +1,4 @@
-export type RawCell = string | number | boolean | null | undefined;
+export type RawCell = string | number | boolean | Date | null | undefined;
 
 import type { CanonicalRegion } from "./crc-constants";
 

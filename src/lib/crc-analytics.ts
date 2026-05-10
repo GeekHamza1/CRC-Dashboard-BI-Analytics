@@ -121,16 +121,13 @@ export function countMap(keys: string[]) {
 
 export function globalKpis(rows: CrcRow[]) {
   const abandons = rows.filter((r) => classifyStatus(r.résultat) === "abandon").length;
-  const appelsDécrochésInterrompus = rows.filter(
-    (r) => classifyStatus(r.résultat) === "appel_abandonne",
-  ).length;
   const informés = rows.filter((r) => classifyStatus(r.résultat) === "client_informe").length;
   const tickets = rows.filter((r) => classifyStatus(r.résultat) === "ticket_transmis").length;
   return {
     totalRows: rows.length,
     réclamations: rows.length,
     totalAppels: rows.length,
-    appelsAbandonnés: abandons + appelsDécrochésInterrompus,
+    appelsAbandonnés: abandons,
     clientsInformés: informés,
     ticketsTransmis: tickets,
     appelsParRégion: countMap(rows.map((r) => r.régionCanon)),

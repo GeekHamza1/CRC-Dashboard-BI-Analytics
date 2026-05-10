@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import type { CrcExportColumnVisibility } from "./crc-export-helpers";
-import { activeRegionShorts, activeTeleOpKeys } from "./crc-export-helpers";
+import { activeRegionShorts, activeTeleOpKeys, numericValue } from "./crc-export-helpers";
 import type { CrcReportConfig } from "./crc-report-config";
 import { mergeExportExcelSheets } from "./crc-report-config";
 import {
@@ -93,8 +93,8 @@ export function exportCrcExcel(
     const pr = pivotRésultatParRégion(rows);
     const slim = pr.map((row) => {
       const o: Record<string, string | number> = { Résultat: row.name };
-      for (const s of visR) o[s] = Number((row as Record<string, number>)[s] ?? 0);
-      o.Total = visR.reduce((acc, s) => acc + Number((row as Record<string, number>)[s] ?? 0), 0);
+      for (const s of visR) o[s] = numericValue(row, s);
+      o.Total = visR.reduce((acc, s) => acc + numericValue(row, s), 0);
       return o;
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Pivot Résultat x Région");
@@ -104,7 +104,7 @@ export function exportCrcExcel(
     const pm = pivotMétierParRégion(rows);
     const slim = pm.map((row) => {
       const o: Record<string, string | number> = { Métier: row.métier };
-      for (const s of visM) o[s] = Number((row as Record<string, number>)[s] ?? 0);
+      for (const s of visM) o[s] = numericValue(row, s);
       return o;
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Pivot Métier x Région");
@@ -114,7 +114,7 @@ export function exportCrcExcel(
     const pn = pivotNatureParRégion(rows);
     const slim = pn.map((row) => {
       const o: Record<string, string | number> = { Nature: row.nature };
-      for (const s of visN) o[s] = Number((row as Record<string, number>)[s] ?? 0);
+      for (const s of visN) o[s] = numericValue(row, s);
       return o;
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Pivot Nature x Région");
@@ -124,7 +124,7 @@ export function exportCrcExcel(
     const ops = operatorRanking(rows);
     const slim = ops.map((o) => {
       const r: Record<string, string | number> = { Téléopérateur: o.name };
-      for (const k of teleK) r[k] = (o as Record<string, number>)[k] ?? 0;
+      for (const k of teleK) r[k] = numericValue(o, k);
       return r;
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Classement téléopérateurs");

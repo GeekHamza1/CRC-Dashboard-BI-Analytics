@@ -3,7 +3,7 @@ import type PptxGenJS from "pptxgenjs";
 import { AGGREGATE_VOLUME_BAR, compareResultBuckets, getResultColor, hexForPptx } from "../constants/chart-colors";
 import { résultatBucket } from "../crc-analytics";
 import { REGION_COLORS, REGION_ORDER, REGION_SHORT } from "../crc-constants";
-import type { PivotRegionRow } from "../crc-export-helpers";
+import { numericValue, type PivotRegionRow } from "../crc-export-helpers";
 
 function regionHexForShort(s: string): string {
   const rg = REGION_ORDER.find((r) => REGION_SHORT[r] === s);
@@ -22,7 +22,7 @@ export function addStackedPivotBarChart(
   const series = regionShorts.map((s) => ({
     name: s,
     labels,
-    values: rows.map((row) => Number((row as Record<string, number>)[s] ?? 0)),
+    values: rows.map((row) => numericValue(row, s)),
   }));
   slide.addChart("bar", series, {
     ...box,

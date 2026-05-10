@@ -22,7 +22,7 @@ import {
 import { REGION_COLORS, REGION_ORDER, REGION_SHORT } from "@/lib/crc-constants";
 import { getResultColor } from "@/lib/constants/chart-colors";
 import type { RegionPivotId } from "@/lib/crc-export-helpers";
-import { activeRegionShorts } from "@/lib/crc-export-helpers";
+import { activeRegionShorts, numericValue } from "@/lib/crc-export-helpers";
 import {
   captureElementPng,
   exportMatrixExcel,
@@ -99,10 +99,10 @@ export function CrcRegionPivotWidget(props: {
 
   const chartRows = useMemo(() => {
     return rows.map((row) => {
-      const label = String((row as Record<string, string | number>)[rowLabelKey] ?? row.name ?? "");
+      const label = String(row[rowLabelKey] ?? row.name ?? "");
       const o: Record<string, string | number> = { label };
       for (const s of shorts) {
-        o[s] = Number((row as Record<string, number>)[s] ?? 0);
+        o[s] = numericValue(row, s);
       }
       return o;
     });
@@ -113,7 +113,7 @@ export function CrcRegionPivotWidget(props: {
     shorts.forEach((s) => m.set(s, 0));
     rows.forEach((row) => {
       shorts.forEach((s) => {
-        m.set(s, (m.get(s) ?? 0) + Number((row as Record<string, number>)[s] ?? 0));
+        m.set(s, (m.get(s) ?? 0) + numericValue(row, s));
       });
     });
     return shorts.map((s) => {
@@ -345,7 +345,7 @@ export function CrcRegionPivotWidget(props: {
           </thead>
           <tbody>
             {rows.map((row, idx) => {
-              const label = String((row as Record<string, string | number>)[rowLabelKey] ?? row.name);
+              const label = String(row[rowLabelKey] ?? row.name ?? "");
               const leftColor = rowLabelKey === "name" ? getResultColor(label) : undefined;
               return (
                 <tr
@@ -360,7 +360,7 @@ export function CrcRegionPivotWidget(props: {
                   </td>
                   {shorts.map((s) => (
                     <td key={s} className="px-3 py-1.5 text-center tabular-nums">
-                      {(row as Record<string, number>)[s] ?? 0}
+                      {numericValue(row, s)}
                     </td>
                   ))}
                 </tr>

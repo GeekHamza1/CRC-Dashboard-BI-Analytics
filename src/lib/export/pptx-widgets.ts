@@ -1,4 +1,5 @@
 import type { CrcPptxDashboardSnapshot, CrcPptxWidgetDescriptor } from "./crc-pptx-types";
+import type { CrcChartKey } from "../crc-report-config";
 
 /**
  * Ordered manifest of logical export blocks — extend here when new dashboard widgets ship.
@@ -21,11 +22,12 @@ export function buildCrcPptxWidgetPlan(snapshot: CrcPptxDashboardSnapshot): CrcP
   }
 
   if (d.charts.geoBars || d.charts.geoDonut) {
+    const chartKeys: CrcChartKey[] = (["geoBars", "geoDonut"] as const).filter((k) => d.charts[k]);
     plan.push({
       id: "regional",
       kind: "chart",
       title: "Analytique régionale",
-      chartKeys: ["geoBars", "geoDonut"].filter((k) => d.charts[k as "geoBars" | "geoDonut"]),
+      chartKeys,
     });
   }
 
@@ -39,11 +41,14 @@ export function buildCrcPptxWidgetPlan(snapshot: CrcPptxDashboardSnapshot): CrcP
   }
 
   if (d.exportPptx.results) {
+    const chartKeys: CrcChartKey[] = (["statusPie", "dailyArea", "trendLine", "monthlyBars"] as const).filter(
+      (k) => d.charts[k],
+    );
     plan.push({
       id: "resultat",
       kind: "composite",
       title: "Résultat & tendances",
-      chartKeys: ["statusPie", "dailyArea", "trendLine", "monthlyBars"].filter((k) => d.charts[k as keyof typeof d.charts]),
+      chartKeys,
       tableKeys: d.tables.pivotResult ? ["pivotResult"] : [],
     });
   }

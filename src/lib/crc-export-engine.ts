@@ -17,7 +17,7 @@ import type { RawColumnKey } from "./crc-report-config";
 import type { CrcRow } from "./crc-types";
 import { regionSlice } from "./crc-analytics";
 import type { CanonicalRegion } from "./crc-constants";
-import { formatRawCellForExport, type OperatorRankRow, type PivotRegionRow } from "./crc-export-helpers";
+import { formatRawCellForExport, numericValue, type OperatorRankRow, type PivotRegionRow } from "./crc-export-helpers";
 import { addResultDistributionBarChart } from "./export/pptx-charts";
 
 function sanitizeBase(s: string) {
@@ -71,8 +71,8 @@ export function exportMatrixExcel(
   const wb = XLSX.utils.book_new();
   const json = rows.map((row) => {
     const o: Record<string, string | number> = { [labelHeader]: matrixRowLabel(row) };
-    for (const s of regionCols) o[s] = Number((row as Record<string, number>)[s] ?? 0);
-    const tot = regionCols.reduce((acc, s) => acc + Number((row as Record<string, number>)[s] ?? 0), 0);
+    for (const s of regionCols) o[s] = numericValue(row, s);
+    const tot = regionCols.reduce((acc, s) => acc + numericValue(row, s), 0);
     o.Total = tot;
     return o;
   });
@@ -104,7 +104,7 @@ export async function exportMatrixPdf(
 
   const head = [labelHeader, ...regionCols, "Total"];
   const body = rows.map((row) => {
-    const nums = regionCols.map((s) => Number((row as Record<string, number>)[s] ?? 0));
+    const nums = regionCols.map((s) => numericValue(row, s));
     return [matrixRowLabel(row), ...nums.map(String), String(nums.reduce((a, b) => a + b, 0))];
   });
 
@@ -156,8 +156,8 @@ export async function exportMatrixPptx(
   const tableRows = [
     head,
     ...rows.slice(0, 24).map((row) => {
-      const nums = regionCols.map((s) => String(Number((row as Record<string, number>)[s] ?? 0)));
-      const tot = regionCols.reduce((a, s) => a + Number((row as Record<string, number>)[s] ?? 0), 0);
+      const nums = regionCols.map((s) => String(numericValue(row, s)));
+      const tot = regionCols.reduce((a, s) => a + numericValue(row, s), 0);
       return [{ text: matrixRowLabel(row) }, ...nums.map((t) => ({ text: t })), { text: String(tot) }];
     }),
   ];
@@ -205,7 +205,7 @@ export async function exportTeleOpPdf(ops: OperatorRankRow[], metricKeys: string
   const head = ["Téléopérateur", ...metricKeys.map((k) => labelForTeleKey(k))];
   const body = ops.map((o) => [
     o.name,
-    ...metricKeys.map((k) => String((o as Record<string, number>)[k] ?? 0)),
+    ...metricKeys.map((k) => String(numericValue(o, k))),
   ]);
 
   autoTable(doc, {
@@ -274,7 +274,7 @@ export async function exportTeleOpPptx(ops: OperatorRankRow[], metricKeys: strin
     ...metricKeys.map((k) => {
       const hex = (colorForTeleKey(k) ?? "#334155").replace("#", "");
       return {
-        text: String((o as Record<string, number>)[k] ?? 0),
+        text: String(numericValue(o, k)),
         options: { color: hex },
       };
     }),
@@ -432,4 +432,3 @@ export function exportRegionResultBarExcel(regionTitle: string, chartRows: Regio
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(json), regionTitle.slice(0, 28));
   XLSX.writeFile(wb, `${sanitizeBase(basename)}.xlsx`);
 }
-

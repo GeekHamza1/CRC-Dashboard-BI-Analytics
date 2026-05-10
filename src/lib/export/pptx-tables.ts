@@ -8,7 +8,7 @@ import {
 } from "../constants/chart-colors";
 import { REGION_COLORS, REGION_ORDER, REGION_SHORT } from "../crc-constants";
 import type { PivotRegionRow } from "../crc-export-helpers";
-import { formatRawCellForExport } from "../crc-export-helpers";
+import { formatRawCellForExport, numericValue } from "../crc-export-helpers";
 import type { RawColumnKey } from "../crc-report-config";
 import type { CrcRow } from "../crc-types";
 
@@ -51,7 +51,7 @@ export function pivotTableRows(
 
   const body = rows.map((row) => {
     const label = matrixRowLabel(row);
-    const nums = regionShorts.map((s) => Number((row as Record<string, number>)[s] ?? 0));
+    const nums = regionShorts.map((s) => numericValue(row, s));
     const tot = nums.reduce((a, b) => a + b, 0);
     const firstCell =
       labelHeader === "Résultat"
@@ -117,7 +117,7 @@ export function teleopTableRows(
   const body = ops.map((o) => [
     { text: o.name },
     ...metricKeys.map((key) => ({
-      text: String((o as Record<string, number>)[key] ?? 0),
+      text: String(numericValue(o, key)),
       options: { color: hexForPptx(teleColor[key] ?? "#64748b") },
     })),
   ]);

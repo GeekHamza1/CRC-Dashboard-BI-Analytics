@@ -89,8 +89,11 @@ export function CrcTeleopStatsWidget(props: {
     return rows.slice(0, 14).map((o) => {
       const label = o.name.length > 16 ? `${o.name.slice(0, 15)}…` : o.name;
       const d: Record<string, string | number> = { label };
+
       keys.forEach((k) => {
-        d[k] = (o as Record<string, number>)[k] ?? 0;
+        const value = o[k as keyof OperatorRankRow];
+
+        d[k] = typeof value === "number" ? value : 0;
       });
       return d;
     });
@@ -99,7 +102,11 @@ export function CrcTeleopStatsWidget(props: {
   const pieTotals = useMemo(() => {
     const acc: Record<string, number> = {};
     keys.forEach((k) => {
-      acc[k] = rows.reduce((s, o) => s + Number((o as Record<string, number>)[k] ?? 0), 0);
+      acc[k] = rows.reduce((s, o) => {
+  const value = o[k as keyof OperatorRankRow];
+
+  return s + (typeof value === "number" ? value : 0);
+}, 0);
     });
     return keys.map((k) => ({
       name: METRIC_LABEL[k],
@@ -308,7 +315,9 @@ export function CrcTeleopStatsWidget(props: {
                     className="px-3 py-1.5 text-center tabular-nums font-semibold"
                     style={{ color: METRIC_COLOR[k] }}
                   >
-                    {(o as Record<string, number>)[k] ?? 0}
+                    {typeof o[k as keyof OperatorRankRow] === "number"
+                      ? (o[k as keyof OperatorRankRow] as number)
+                      : 0}
                   </td>
                 ))}
               </tr>

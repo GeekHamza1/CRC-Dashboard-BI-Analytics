@@ -1092,7 +1092,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       <YAxis tick={{ fill: palette.muted, fontSize: 11 }} />
                       {chartTooltip}
                       <Bar dataKey="v" radius={[10, 10, 4, 4]}>
-                        {REGION_ORDER.map((rg, i) => (
+                        {REGION_ORDER.map((rg) => (
                           <Cell key={rg} fill={REGION_COLORS[rg]} opacity={isDark ? 0.94 : 0.92} />
                         ))}
                       </Bar>

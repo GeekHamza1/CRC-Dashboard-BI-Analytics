@@ -121,19 +121,28 @@ export async function exportTablePptx(
   slide.addText(title, { x: 1.35, y: 0.2, fontSize: 18, bold: true, color: "FFFFFF" });
   slide.addText(`${subtitle}\n${reportTimestamp()}`, { x: 1.35, y: 0.48, fontSize: 9, color: "FFEDD5" });
 
-  const tableRows: string[][] = [
-    columns,
-    ...rows.map((r) => columns.map((c) => String(r[c] ?? "—")).slice(0, columns.length)),
-  ];
+const tableRows = [
+  columns.map((h) => ({
+    text: String(h),
+  })),
+
+  ...rows.map((row) =>
+    columns.map((col) => ({
+      text: String(row[col] ?? ""),
+    }))
+  ),
+];
 
   slide.addTable(tableRows.slice(0, Math.min(tableRows.length, 42)), {
+    
     x: 0.4,
     y: 1,
     w: 12.6,
     fontSize: 8,
     border: { pt: 0.4, color: "e5e7eb" },
-    fill: "ffffff",
-  });
+fill: { color: "ffffff" },
+ });
 
   await pptx.writeFile({ fileName: `${sanitize(basename)}.pptx` });
+  
 }

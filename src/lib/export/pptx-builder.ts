@@ -12,7 +12,7 @@ import {
 import { RESULT_COLORS, hexForPptx } from "../constants/chart-colors";
 import { REGION_COLORS, REGION_ORDER, REGION_SHORT } from "../crc-constants";
 import type { CrcExportColumnVisibility } from "../crc-export-helpers";
-import { activeRegionShorts, activeTeleOpKeys, type PivotRegionRow } from "../crc-export-helpers";
+import { activeRegionShorts, activeTeleOpKeys, numericValue, type PivotRegionRow } from "../crc-export-helpers";
 import { RAW_COLUMN_KEYS, mergeExportPptx } from "../crc-report-config";
 import type { CrcRow } from "../crc-types";
 import { resolveReportLogo } from "../export-branding";
@@ -228,7 +228,7 @@ export async function buildAndSaveCrcPptx(
       const series = shorts.map((s) => ({
         name: s,
         labels: mon.map((m) => String(m.mois)),
-        values: mon.map((m) => Number((m as Record<string, number>)[s] ?? 0)),
+        values: mon.map((m) => numericValue(m, s)),
       }));
       addStackedMonthlyByRegionChart(res, series, { x: 0.45, y, w: 12.4, h: 2.0 });
     }
@@ -238,7 +238,7 @@ export async function buildAndSaveCrcPptx(
     if (dash.tables.pivotMetier && pivM.length) {
       const met = pptx.addSlide();
       addSlideHeader(met, "Métier × régions", "Histogramme empilé + tableau éditable", logoDataUrl);
-      addStackedPivotBarChart(met, pivM as PivotRegionRow[], (row) => String((row as { métier: string }).métier), visM, {
+      addStackedPivotBarChart(met, pivM as PivotRegionRow[], (row) => String(row.métier ?? ""), visM, {
         x: 0.45,
         y: 1.0,
         w: 12.4,
@@ -250,7 +250,7 @@ export async function buildAndSaveCrcPptx(
     if (dash.tables.pivotNature && pivN.length) {
       const nat = pptx.addSlide();
       addSlideHeader(nat, "Nature de réclamation × régions", "Empilement + tableau", logoDataUrl);
-      addStackedPivotBarChart(nat, pivN as PivotRegionRow[], (row) => String((row as { nature: string }).nature), visN, {
+      addStackedPivotBarChart(nat, pivN as PivotRegionRow[], (row) => String(row.nature ?? ""), visN, {
         x: 0.45,
         y: 1.0,
         w: 12.4,

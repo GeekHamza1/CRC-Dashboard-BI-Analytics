@@ -20,7 +20,7 @@ import {
 } from "./constants/chart-colors";
 import { REGION_COLORS, REGION_ORDER, REGION_SHORT } from "./crc-constants";
 import type { CrcExportColumnVisibility } from "./crc-export-helpers";
-import { activeRegionShorts, activeTeleOpKeys } from "./crc-export-helpers";
+import { activeRegionShorts, activeTeleOpKeys, numericValue } from "./crc-export-helpers";
 import type { CrcReportConfig } from "./crc-report-config";
 import { mergeExportPdf } from "./crc-report-config";
 import type { CrcRow } from "./crc-types";
@@ -249,7 +249,7 @@ export async function exportCrcPdf(
     .map((r) => ({
       label: r.name,
       value: visPivotResult.reduce(
-        (s, key) => s + Number((r as Record<string, number>)[key] ?? 0),
+        (s, key) => s + numericValue(r, key),
         0,
       ),
       color: getResultColor(r.name),
@@ -284,7 +284,7 @@ export async function exportCrcPdf(
     autoTable(doc, {
       head: [["Résultat", ...visPivotResult, "Total"]],
       body: resultPivot.map((row) => {
-        const vals = visPivotResult.map((s) => Number((row as Record<string, number>)[s] ?? 0));
+        const vals = visPivotResult.map((s) => numericValue(row, s));
         return [row.name, ...vals.map(String), String(vals.reduce((a, b) => a + b, 0))];
       }),
       startY: cursor + 6,
@@ -447,7 +447,7 @@ export async function exportCrcPdf(
       head: [teleHead],
       body: ops.map((o) => [
         o.name,
-        ...teleKeys.map((key) => String((o as Record<string, number>)[key] ?? 0)),
+        ...teleKeys.map((key) => String(numericValue(o, key))),
       ]),
       startY: 96,
       styles: { fontSize: 8 },

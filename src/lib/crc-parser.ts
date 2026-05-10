@@ -179,37 +179,80 @@ function buildHeaderMap(headers: string[]): Map<number, RowField | null> {
 
 function excelSerialToDate(serial: number): Date | null {
   if (!Number.isFinite(serial)) return null;
-  /** Excel serial days relative to 1899-12-30 (SheetJS-compatible baseline) */
-  const epochUtc = Date.UTC(1899, 11, 30);
-  const millis = epochUtc + Math.round(serial * 86400000);
-  const dt = new Date(millis);
-  return Number.isNaN(+dt) ? null : dt;
+  const utcDays = Math.floor(serial - 25569);
+  const utcValue = utcDays * 86400;
+  const dateInfo = new Date(utcValue * 1000);
+  if (Number.isNaN(dateInfo.getTime())) return null;
+
+  const fractionalDay = serial - Math.floor(serial);
+  const totalSeconds = Math.round(86400 * fractionalDay);
+  dateInfo.setSeconds(dateInfo.getSeconds() + totalSeconds);
+  return dateInfo;
 }
 
 function parseFlexibleDate(cell: RawCell): Date | null {
-  if (cell == null || cell === "") return null;
-  if (cell instanceof Date && !Number.isNaN(+cell)) return cell;
+  if (cell == null || cell === "") {
+    return null;
+  }
+
+  if (cell instanceof Date) {
+    const copy = new Date(cell.getTime());
+    return Number.isNaN(copy.getTime()) ? null : copy;
+  }
+
   if (typeof cell === "number" && Number.isFinite(cell)) {
-    /** Heuristic: serial dates for typical export ranges vs epoch ms */
+    // Excel serial date
     if (cell > 20000 && cell < 90000) {
       const d = excelSerialToDate(cell);
-      if (d) return d;
+
+      if (d) {
+        return d;
+      }
     }
+
+    // timestamp
     const asMs = new Date(cell);
-    if (!Number.isNaN(+asMs)) return asMs;
+
+    if (!Number.isNaN(+asMs)) {
+      return asMs;
+    }
   }
+
+  if (typeof cell === "boolean") {
+    return null;
+  }
+
   const s = String(cell).trim();
-  /** dd/mm/yyyy or dd-mm-yyyy */
+  if (!s) return null;
+
+  // dd/mm/yyyy or dd-mm-yyyy
   const m = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/.exec(s);
+
   if (m) {
     const d = Number(m[1]);
     const mo = Number(m[2]);
     const y = Number(m[3]);
+
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+
     const dt = new Date(y, mo - 1, d);
-    return Number.isNaN(+dt) ? null : dt;
+    if (
+      Number.isNaN(dt.getTime()) ||
+      dt.getFullYear() !== y ||
+      dt.getMonth() !== mo - 1 ||
+      dt.getDate() !== d
+    ) {
+      return null;
+    }
+    return dt;
   }
+
   const iso = Date.parse(s);
-  if (!Number.isNaN(iso)) return new Date(iso);
+
+  if (!Number.isNaN(iso)) {
+    return new Date(iso);
+  }
+
   return null;
 }
 

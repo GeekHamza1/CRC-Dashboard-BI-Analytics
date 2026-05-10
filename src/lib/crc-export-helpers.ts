@@ -12,7 +12,12 @@ export type OperatorRankRow = {
 };
 
 /** Re-export shape from analytics — avoid circular import by defining minimal type */
-export type PivotRegionRow = { name: string; [regionShort: string]: string | number };
+export type PivotRegionRow = {
+  name?: string;
+  métier?: string;
+  nature?: string;
+  [regionShort: string]: string | number | undefined;
+};
 
 const TELE_KEYS = ["volume", "abandons", "appelsDécrochésInterrompus", "informés", "tickets"] as const;
 export type TeleOpMetricKey = (typeof TELE_KEYS)[number];
@@ -73,9 +78,14 @@ export function activeTeleOpKeys(mask: Record<string, boolean> | undefined): Tel
   return t.length ? [...t] : [...TELE_KEYS];
 }
 
+export function numericValue(obj: Record<string, unknown>, key: string): number {
+  const value = obj[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 /** Pivot row cells for visible regions + total of visible only */
 export function pivotRowToCells(row: PivotRegionRow, shorts: string[]): { cells: string[]; total: number } {
-  const nums = shorts.map((s) => Number((row as Record<string, number>)[s] ?? 0));
+  const nums = shorts.map((s) => numericValue(row, s));
   return {
     cells: nums.map(String),
     total: nums.reduce((a, b) => a + b, 0),
