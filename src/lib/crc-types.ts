@@ -12,6 +12,13 @@ export interface CrcRow {
   campagneType: string;
   formulaire: string;
   date: Date | null;
+
+  /**
+   * Original Excel text value preserved exactly.
+   * Example:
+   * 10/05/2026 à 21:13
+   */
+  rawDateText: string;
   moisLabel: string;
   téléopérateur: string;
   /**

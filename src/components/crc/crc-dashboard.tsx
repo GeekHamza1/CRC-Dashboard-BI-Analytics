@@ -437,11 +437,34 @@ export default function CrcDashboard() {
     Object.fromEntries(REGION_ORDER.map((r) => [r, true])),
   );
   const [fauxPage, setFauxPage] = useState(1);
+  const [fauxResultatFilter, setFauxResultatFilter] = useState("all");
 
-  const fauxTraitementsRows = useMemo(
-    () => filteredRows.filter((r) => isEmptyField(r.regions) || isEmptyField(r.metier)),
-    [filteredRows],
+  const fauxResultatOptions = useMemo(
+  () =>
+    Array.from(
+      new Set(
+        filteredRows
+          .map((r) => r.résultat)
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b, "fr")),
+  [filteredRows],
+);
+
+const fauxTraitementsRows = useMemo(() => {
+  let rowsFiltered = filteredRows.filter(
+    (r) => isEmptyField(r.regions) || isEmptyField(r.metier),
   );
+
+  if (fauxResultatFilter !== "all") {
+    rowsFiltered = rowsFiltered.filter(
+      (r) => r.résultat === fauxResultatFilter,
+    );
+  }
+
+  return rowsFiltered;
+}, [filteredRows, fauxResultatFilter]);
+
   const fauxPerPage = 25;
   const fauxPaged = useMemo(
     () => fauxTraitementsRows.slice((fauxPage - 1) * fauxPerPage, fauxPage * fauxPerPage),
@@ -1253,7 +1276,15 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={sérieMois}>
                         <CartesianGrid stroke={palette.grid} strokeDasharray="4 8" vertical={false} />
-                        <XAxis hide={sérieMois.length > 22} tick={{ fill: palette.muted, fontSize: 10 }} dataKey="mois" />
+                        <XAxis
+                          dataKey="mois"
+                          interval={0}
+                          angle={-15}
+                          textAnchor="end"
+                          height={70}
+                          tick={{ fontSize: 12 }}
+                        />
+                        {/* <XAxis hide={sérieMois.length > 22} tick={{ fill: palette.muted, fontSize: 10 }} dataKey="mois" /> */}
                         <YAxis tick={{ fill: palette.muted }} />
                         <Legend />
                         {chartTooltip}
@@ -1479,6 +1510,32 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             </div>
           }
         >
+          <div className="mb-4 flex items-center gap-3 flex-wrap">
+            <label className="text-xs font-semibold uppercase text-slate-500">
+              Résultat
+            </label>
+
+            <select
+              value={fauxResultatFilter}
+              onChange={(e) => {
+                setFauxResultatFilter(e.target.value);
+                setFauxPage(1);
+              }}
+              className="rounded-xl border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-900"
+            >
+              <option value="all">Tous</option>
+
+              {fauxResultatOptions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+
+            <span className="text-xs text-slate-500">
+              {fauxTraitementsRows.length} lignes
+            </span>
+          </div>
           <div className="overflow-auto rounded-2xl border border-slate-200 dark:border-slate-700">
             <table className="min-w-[980px] w-full text-xs">
               <thead className="bg-slate-900 text-white">

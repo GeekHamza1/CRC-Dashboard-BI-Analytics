@@ -201,6 +201,59 @@ export function dailySeries(rows: CrcRow[]) {
     return out;
   });
 }
+const MONTH_INDEX_FR: Record<string, number> = {
+  janvier: 0,
+  février: 1,
+  fevrier: 1,
+  mars: 2,
+  avril: 3,
+  mai: 4,
+  juin: 5,
+  juillet: 6,
+  août: 7,
+  aout: 7,
+  septembre: 8,
+  octobre: 9,
+  novembre: 10,
+  décembre: 11,
+  decembre: 11,
+};
+
+function parseMonthLabel(label: string): number {
+  const value = String(label ?? "").trim();
+
+  // FORMAT: 2026-04
+  const isoMatch = value.match(/^(\d{4})-(\d{2})$/);
+
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]) - 1;
+    return new Date(year, month, 1).getTime();
+  }
+
+  // FORMAT: Avril 2026
+  const parts = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/\s+/);
+
+  if (parts.length >= 2) {
+    const monthName = parts[0];
+    const year = Number(parts[1]);
+
+    const monthIndex = MONTH_INDEX_FR[monthName];
+
+    if (
+      typeof monthIndex === "number" &&
+      Number.isFinite(year)
+    ) {
+      return new Date(year, monthIndex, 1).getTime();
+    }
+  }
+
+  return 0;
+}
 
 export function monthlySeries(rows: CrcRow[]) {
   const bucket = new Map<string, Record<CanonicalRegion, number>>();
@@ -211,12 +264,20 @@ export function monthlySeries(rows: CrcRow[]) {
         : r.date
           ? `${r.date.getFullYear()}-${String(r.date.getMonth() + 1).padStart(2, "0")}`
           : "";
-    if (!month) return;
+          if (
+        !month ||
+        !String(month).trim() ||
+        parseMonthLabel(String(month)) === 0
+      ) {
+        return;
+      }
     const hit = bucket.get(month) ?? zeroRegionCounts();
     hit[r.régionCanon] += 1;
     bucket.set(month, hit);
   });
-  return [...bucket.keys()].sort().map((mois) => {
+return [...bucket.keys()]
+  .sort((a, b) => parseMonthLabel(a) - parseMonthLabel(b))
+  .map((mois) => {
     const d = bucket.get(mois)!;
     const out: Record<string, string | number> = { mois, total: 0 };
     REGION_ORDER.forEach((rg) => {

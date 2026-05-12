@@ -196,26 +196,36 @@ function parseFlexibleDate(cell: RawCell): Date | null {
     return null;
   }
 
-  if (cell instanceof Date) {
-    const copy = new Date(cell.getTime());
-    return Number.isNaN(copy.getTime()) ? null : copy;
+  // Already a valid Date object
+  if (
+    typeof cell === "object" &&
+    cell instanceof Date &&
+    !Number.isNaN(cell.getTime())
+  ) {
+    return new Date(cell.getTime());
   }
 
+  // Excel serial numbers
   if (typeof cell === "number" && Number.isFinite(cell)) {
-    // Excel serial date
     if (cell > 20000 && cell < 90000) {
-      const d = excelSerialToDate(cell);
+      const parsed = XLSX.SSF.parse_date_code(cell);
 
-      if (d) {
-        return d;
+      if (parsed) {
+        return new Date(
+          parsed.y,
+          parsed.m - 1,
+          parsed.d,
+          parsed.H || 0,
+          parsed.M || 0,
+          parsed.S || 0
+        );
       }
     }
 
-    // timestamp
-    const asMs = new Date(cell);
+    const timestampDate = new Date(cell);
 
-    if (!Number.isNaN(+asMs)) {
-      return asMs;
+    if (!Number.isNaN(timestampDate.getTime())) {
+      return timestampDate;
     }
   }
 
@@ -223,38 +233,41 @@ function parseFlexibleDate(cell: RawCell): Date | null {
     return null;
   }
 
-  const s = String(cell).trim();
-  if (!s) return null;
+  const text = String(cell).trim();
 
-  // dd/mm/yyyy or dd-mm-yyyy
-  const m = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/.exec(s);
-
-  if (m) {
-    const d = Number(m[1]);
-    const mo = Number(m[2]);
-    const y = Number(m[3]);
-
-    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
-
-    const dt = new Date(y, mo - 1, d);
-    if (
-      Number.isNaN(dt.getTime()) ||
-      dt.getFullYear() !== y ||
-      dt.getMonth() !== mo - 1 ||
-      dt.getDate() !== d
-    ) {
-      return null;
-    }
-    return dt;
+  if (!text) {
+    return null;
   }
 
-  const iso = Date.parse(s);
+  /**
+   * French formats:
+   * 10/05/2026
+   * 10/05/2026 à 21:13
+   * 10-05-2026 21:13
+   */
+  const fr = text.match(
+    /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:\s*(?:à)?\s*(\d{1,2}):(\d{2}))?$/
+  );
 
-  if (!Number.isNaN(iso)) {
-    return new Date(iso);
+  if (fr) {
+    const [, d, m, y, hh = "0", mm = "0"] = fr;
+
+    const dt = new Date(
+      Number(y),
+      Number(m) - 1,
+      Number(d),
+      Number(hh),
+      Number(mm),
+      0
+    );
+
+    return Number.isNaN(dt.getTime()) ? null : dt;
   }
 
-  return null;
+  // ISO / native parse fallback
+  const native = new Date(text);
+
+  return Number.isNaN(native.getTime()) ? null : native;
 }
 
 function stringifyCell(cell: RawCell): string {
@@ -405,6 +418,7 @@ export function parseWorkbook(wb: XLSX.WorkBook, fileHintName = ""): ParseResult
       campagneType: emptyFallback(rec.campagneType, false),
       formulaire: emptyFallback(rec.formulaire, false),
       date: parsedDate,
+rawDateText: stringifyCell(rawDateCell ?? ""),
       moisLabel: moisLabel || NON_RENSEIGNE,
       téléopérateur: emptyFallback(rec.téléopérateur, false),
       résultat: résultatNormalized,
