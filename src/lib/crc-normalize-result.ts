@@ -33,6 +33,7 @@ export function normalizeResult(raw: unknown): string {
 
   if (
     value === normalizeResultKey("Appel Abandonné") ||
+    value === normalizeResultKey("Appel Abondonné") ||
     value === normalizeResultKey("Appels décrochés interrompus")
   ) {
     return "Appels décrochés interrompus";
