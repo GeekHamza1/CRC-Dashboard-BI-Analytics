@@ -18,8 +18,14 @@ function normalizeRecord(rec: DataRecord): DataRecord {
   return out;
 }
 
+function omitCellA1(ws: XLSX.WorkSheet): XLSX.WorkSheet {
+  const clone = { ...ws } as XLSX.WorkSheet;
+  delete (clone as Record<string, unknown>).A1;
+  return clone;
+}
+
 function rowsFromSheet(ws: XLSX.WorkSheet): DataRecord[] {
-  const raw = XLSX.utils.sheet_to_json<DataRecord>(ws, {
+  const raw = XLSX.utils.sheet_to_json<DataRecord>(omitCellA1(ws), {
     defval: null,
     raw: false,
     blankrows: false,

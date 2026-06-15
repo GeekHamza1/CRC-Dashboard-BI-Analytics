@@ -278,6 +278,12 @@ function stringifyCell(cell: RawCell): string {
   return String(cell).trim();
 }
 
+function omitCellA1(ws: XLSX.WorkSheet): XLSX.WorkSheet {
+  const clone = { ...ws } as XLSX.WorkSheet;
+  delete (clone as Record<string, unknown>).A1;
+  return clone;
+}
+
 function rowOperationalHasSignal(r: Record<RowField, string>): boolean {
   return (
     !!(r.metier?.trim()) ||
@@ -300,7 +306,7 @@ export function parseWorkbook(wb: XLSX.WorkBook, fileHintName = ""): ParseResult
   const sheets = wb.SheetNames;
   logs.push(`Fichier: ${fileHintName || "(buffer)"}`);
   logs.push(`Feuilles: ${sheets.join(", ")}`);
-  const first = wb.Sheets[sheets[0]];
+  const first = omitCellA1(wb.Sheets[sheets[0]]);
   const json = XLSX.utils.sheet_to_json<unknown[]>(first, {
     header: 1,
     blankrows: false,
