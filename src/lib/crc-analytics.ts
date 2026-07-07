@@ -178,6 +178,19 @@ export function pivotNatureParRégion(rows: CrcRow[]) {
   });
 }
 
+/** Provinces aggregation per region — returns map of region → sorted provinces list */
+export function provincesParRégion(rows: CrcRow[]) {
+  const result: Record<CanonicalRegion, [string, number][]> = {};
+  
+  REGION_ORDER.forEach((region) => {
+    const regionRows = rows.filter((r) => r.régionCanon === region);
+    const provinces = countMap(regionRows.map((r) => r.provinces));
+    result[region] = [...provinces.entries()].sort((a, b) => b[1] - a[1]);
+  });
+  
+  return result;
+}
+
 function zeroRegionCounts(): Record<CanonicalRegion, number> {
   return Object.fromEntries(REGION_ORDER.map((r) => [r, 0])) as Record<CanonicalRegion, number>;
 }

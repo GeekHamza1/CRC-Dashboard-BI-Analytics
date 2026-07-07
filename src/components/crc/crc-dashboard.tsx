@@ -64,6 +64,7 @@ import {
   resetCrcReportConfig,
   saveCrcReportConfig,
 } from "@/lib/crc-report-config";
+import { CrcProvincesPieWidget } from "@/components/crc/crc-provinces-pie-widget";
 import { CrcRegionPivotWidget } from "@/components/crc/crc-region-pivot-widget";
 import { CrcRegionResultCardWidget } from "@/components/crc/crc-region-result-card-widget";
 import { CrcRawPreviewWidget } from "@/components/crc/crc-raw-preview-widget";
@@ -147,6 +148,7 @@ const CHART_LABEL_FR: Record<CrcChartKey, string> = {
   geoBars: "Histogramme régions canon",
   geoDonut: "Donut géographique",
   statusPie: "Camembert résultats (libellés standardisés)",
+  provincesPie: "Camemberts provinces par région",
   dailyArea: "Courbes cumulées par jour",
   monthlyBars: "Barres empilées par mois",
   trendLine: "Tendance totale jour",
@@ -1262,6 +1264,10 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               </GlassCard>
             ) : null}
           </div>
+
+          {reportConfig.charts.provincesPie ? (
+            <CrcProvincesPieWidget rows={filteredRows} palette={palette} />
+          ) : null}
 
           {(reportConfig.charts.dailyArea || reportConfig.charts.monthlyBars) && (
             <div className="grid xl:grid-cols-2 gap-4">
