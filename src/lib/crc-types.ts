@@ -44,7 +44,7 @@ export interface CrcRow {
   communes: string;
   metier: string;
 
-  /** Région for analytics — empty geographic → Faux Appels */
+  /** Région for analytics — empty geographic → Inconnu */
   régionCanon: CanonicalRegion;
 }
 

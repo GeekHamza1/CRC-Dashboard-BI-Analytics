@@ -3,7 +3,7 @@ export const REGION_ORDER = [
   "Drâa-Tafilalet",
   "Laâyoune-Sakia El Hamra",
   "Souss-Massa",
-  "Faux Appels",
+  "Inconnu",
 ] as const;
 
 export type CanonicalRegion = (typeof REGION_ORDER)[number];
@@ -13,7 +13,7 @@ export const REGION_COLORS: Record<CanonicalRegion, string> = {
   "Drâa-Tafilalet": "#f97316",
   "Laâyoune-Sakia El Hamra": "#22c55e",
   "Souss-Massa": "#92400e",
-  "Faux Appels": "#94a3b8",
+  "Inconnu": "#94a3b8",
 };
 
 /** Short labels for compact chart axes */
@@ -21,7 +21,7 @@ export const REGION_SHORT: Record<CanonicalRegion, string> = {
   "Drâa-Tafilalet": "Drâa",
   "Laâyoune-Sakia El Hamra": "Laâyoune",
   "Souss-Massa": "Souss",
-  "Faux Appels": "Faux Appels",
+  "Inconnu": "Inconnu",
 };
 
 export const KEY_OPERATIONAL_STATUSES = [
@@ -32,7 +32,7 @@ export const KEY_OPERATIONAL_STATUSES = [
 ] as const;
 
 export const NON_RENSEIGNE = "Non renseigné";
-export const FAUX_APPELS = "Faux Appels";
+export const FAUX_APPELS = "Inconnu";
 
 /** Professional multi-hue palette for series (light & dark safe) */
 export const CHART_PALETTE = [
@@ -50,7 +50,7 @@ export const CHART_PALETTE = [
 
 export function regionToCanonical(raw: string): CanonicalRegion {
   const t = raw.trim();
-  if (!t || t === FAUX_APPELS) return "Faux Appels";
+  if (!t || t === FAUX_APPELS) return "Inconnu";
   const lower = t.toLowerCase();
   if (lower.includes("drâa") || lower.includes("draa") || lower.includes("tafilalet"))
     return "Drâa-Tafilalet";
@@ -62,5 +62,5 @@ export function regionToCanonical(raw: string): CanonicalRegion {
   )
     return "Laâyoune-Sakia El Hamra";
   if (lower.includes("souss") || lower.includes("massa")) return "Souss-Massa";
-  return "Faux Appels";
+  return "Inconnu";
 }

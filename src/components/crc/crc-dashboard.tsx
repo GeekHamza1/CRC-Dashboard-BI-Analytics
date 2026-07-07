@@ -151,7 +151,7 @@ const CHART_LABEL_FR: Record<CrcChartKey, string> = {
   monthlyBars: "Barres empilées par mois",
   trendLine: "Tendance totale jour",
   teleopBars: "Classement téléopérateurs (diagramme)",
-  regionCards: "Cartes région Drâa / Laâyoune / Souss / Faux appels",
+  regionCards: "Cartes région Drâa / Laâyoune / Souss / Inconnu",
 };
 
 const TABLE_LABEL_FR: Record<CrcTableKey, string> = {
@@ -1347,7 +1347,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             <CrcRegionPivotWidget
               widgetId="pivotResult"
               title="1. Pivot Résultat × Régions"
-              subtitle="Colonnes géographiques Drâa • Laâyoune • Souss • Faux appels · familles depuis le résultat normalisé."
+              subtitle="Colonnes géographiques Drâa • Laâyoune • Souss • Inconnu · familles depuis le résultat normalisé."
               labelHeader="Résultat"
               rowLabelKey="name"
               rows={pivotResult}
