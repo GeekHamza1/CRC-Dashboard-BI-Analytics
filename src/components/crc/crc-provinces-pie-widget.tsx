@@ -10,7 +10,6 @@ import {
   Tooltip,
 } from "recharts";
 
-import { CHART_PALETTE } from "@/lib/constants/chart-colors";
 import { provincesParRégion } from "@/lib/crc-analytics";
 import {
   REGION_COLORS,

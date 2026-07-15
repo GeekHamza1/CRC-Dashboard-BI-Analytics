@@ -97,6 +97,35 @@ export function countMap(keys: string[]) {
   return m;
 }
 
+function parseQueueSeconds(value: string | null | undefined): number | null {
+  if (value == null) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const normalized = raw.replace(/\s+/g, "");
+  if (/^\d+$/.test(normalized)) return Number(normalized);
+
+  const parts = normalized.split(":").map((part) => Number(part));
+  if (parts.some((part) => Number.isNaN(part))) return null;
+
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return null;
+}
+
+export function formatDurationSeconds(totalSeconds: number): string {
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return "—";
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  const hh = String(hours).padStart(2, "0");
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
 export function globalKpis(rows: CrcRow[]) {
   const abandons = rows.filter((r) => classifyStatus(r.résultat) === "abandon").length;
   const appelsDecrochesInterrompus = rows.filter(
@@ -104,6 +133,14 @@ export function globalKpis(rows: CrcRow[]) {
   ).length;
   const informés = rows.filter((r) => classifyStatus(r.résultat) === "client_informe").length;
   const tickets = rows.filter((r) => classifyStatus(r.résultat) === "ticket_transmis").length;
+  const queueSeconds = rows
+    .map((r) => parseQueueSeconds(r.tempsAttenteQueue))
+    .filter((value): value is number => value != null && value > 1);
+  const totalClientsWaited = queueSeconds.length;
+  const avgWaitingSeconds = totalClientsWaited
+    ? queueSeconds.reduce((sum, value) => sum + value, 0) / totalClientsWaited
+    : 0;
+  const pctClientsWaited = rows.length ? (totalClientsWaited / rows.length) * 100 : 0;
   return {
     totalRows: rows.length,
     réclamations: rows.length,
@@ -112,6 +149,10 @@ export function globalKpis(rows: CrcRow[]) {
     appelsDécrochésInterrompus: appelsDecrochesInterrompus,
     clientsInformés: informés,
     ticketsTransmis: tickets,
+    avgWaitingTimeSeconds: avgWaitingSeconds,
+    avgWaitingTime: formatDurationSeconds(avgWaitingSeconds),
+    totalClientsWaited,
+    pctClientsWaited,
     appelsParRégion: countMap(rows.map((r) => r.régionCanon)),
     appelsParMétier: countMap(rows.map((r) => r.metier)),
     appelsParTéléop: countMap(rows.map((r) => r.téléopérateur)),
@@ -180,7 +221,9 @@ export function pivotNatureParRégion(rows: CrcRow[]) {
 
 /** Provinces aggregation per region — returns map of region → sorted provinces list */
 export function provincesParRégion(rows: CrcRow[]) {
-  const result: Record<CanonicalRegion, [string, number][]> = {};
+  const result: Record<CanonicalRegion, [string, number][]> = Object.fromEntries(
+    REGION_ORDER.map((region) => [region, [] as [string, number][]]),
+  ) as Record<CanonicalRegion, [string, number][]>;
   
   REGION_ORDER.forEach((region) => {
     const regionRows = rows.filter((r) => r.régionCanon === region);

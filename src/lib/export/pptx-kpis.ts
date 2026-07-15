@@ -12,6 +12,9 @@ const KPI_LABEL: Record<CrcKpiKey, string> = {
   informes: "Clients informés",
   tickets: "Tickets transmis",
   teleopsDistinct: "Téléopérateurs actifs",
+  avgWaitingTime: "Temps d'attente moyen",
+  clientsWaited: "Clients ayant attendu",
+  pctClientsWaited: "% clients ayant attendu",
   pctInformes: "% clients informés",
   pctTickets: "% tickets transmis",
   coverage: "Couverture filtre",
@@ -84,6 +87,9 @@ export function buildKpiItems(
     appelsDécrochésInterrompus: number;
     clientsInformés: number;
     ticketsTransmis: number;
+    avgWaitingTime: string;
+    totalClientsWaited: number;
+    pctClientsWaited: number;
   },
 ): { key: CrcKpiKey; value: string }[] {
   const vol = rows.length;
@@ -97,6 +103,9 @@ export function buildKpiItems(
     informes: `${k.clientsInformés.toLocaleString("fr-FR")}`,
     tickets: `${k.ticketsTransmis.toLocaleString("fr-FR")}`,
     teleopsDistinct: `${distinctOps}`,
+    avgWaitingTime: `${k.avgWaitingTime}`,
+    clientsWaited: `${k.totalClientsWaited.toLocaleString("fr-FR")}`,
+    pctClientsWaited: `${k.pctClientsWaited.toFixed(1)} %`,
     pctInformes: pct(k.clientsInformés),
     pctTickets: pct(k.ticketsTransmis),
     coverage: `${vol.toLocaleString("fr-FR")} lignes`,

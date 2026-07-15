@@ -149,6 +149,7 @@ const CHART_LABEL_FR: Record<CrcChartKey, string> = {
   geoDonut: "Donut géographique",
   statusPie: "Camembert résultats (libellés standardisés)",
   provincesPie: "Camemberts provinces par région",
+  soussPhonePie: "Camembert Souss — téléphone ligne Verte / Ligne Analogique DPIA",
   dailyArea: "Courbes cumulées par jour",
   monthlyBars: "Barres empilées par mois",
   trendLine: "Tendance totale jour",
@@ -201,6 +202,9 @@ const KPI_LABEL_FR: Record<CrcKpiKey, string> = {
   informes: "Clients informés",
   tickets: "Tickets transmis",
   teleopsDistinct: "Téléopérateurs actifs",
+  avgWaitingTime: "Temps d'attente moyen",
+  clientsWaited: "Clients ayant attendu",
+  pctClientsWaited: "% clients ayant attendu",
   pctInformes: "Part clients informés",
   pctTickets: "% tickets transmis",
   coverage: "Couverture filtre",
@@ -550,6 +554,22 @@ const chartTooltip = (
       .filter((d) => d.value > 0);
   }, [filteredRows]);
 
+  const isAsteriskPhone = (phone: string) => {
+    const normalized = String(phone ?? "").trim();
+    return /[\*✱]|\basterisk\b/i.test(normalized);
+  };
+
+  const sousAsteriskPieData = useMemo<{ name: string; value: number }[]>(() => {
+    const sousRows = filteredRows.filter((r) => r.régionCanon === "Souss-Massa");
+    const asteriskCount = sousRows.filter((r) => isAsteriskPhone(r.téléphone)).length;
+    const otherCount = sousRows.length - asteriskCount;
+
+    return [
+      { name: "Ligne analogique DPIA", value: asteriskCount },
+      { name: "Ligne verte", value: otherCount },
+    ].filter((d) => d.value > 0);
+  }, [filteredRows]);
+
 const téléBar = téléopRanking.slice(0, 12).map((o) => ({
   nom: o.name.length > 18 ? `${o.name.slice(0, 17)}…` : o.name,
 
@@ -607,6 +627,24 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
         title: KPI_LABEL_FR.teleopsDistinct,
         subtitle: "Identifiants distincts post filtres cockpit.",
         body: new Set(filteredRows.map((r) => r.téléopérateur)).size,
+      },
+      {
+        key: "avgWaitingTime",
+        title: KPI_LABEL_FR.avgWaitingTime,
+        subtitle: "Moyenne calculée sur les temps d'attente renseignés.",
+        body: kpis.avgWaitingTime,
+      },
+      {
+        key: "clientsWaited",
+        title: KPI_LABEL_FR.clientsWaited,
+        subtitle: "Nombre de clients avec un temps d'attente renseigné.",
+        body: kpis.totalClientsWaited,
+      },
+      {
+        key: "pctClientsWaited",
+        title: KPI_LABEL_FR.pctClientsWaited,
+        subtitle: "Part des clients avec un temps d'attente renseigné.",
+        body: `${kpis.pctClientsWaited.toFixed(1)} %`,
       },
       {
         key: "pctInformes",
@@ -1254,6 +1292,31 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       <Pie data={résultatPieData} dataKey="value" cx="48%" outerRadius={90} stroke="none">
                         {résultatPieData.map((d) => (
                           <Cell key={d.name} fill={d.fill} />
+                        ))}
+                      </Pie>
+                      <Legend formatter={(v) => <span style={{ color: palette.fg }}>{v}</span>} />
+                      {chartTooltip}
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </GlassCard>
+            ) : null}
+            {reportConfig.charts.soussPhonePie ? (
+              <GlassCard title="Appels Souss" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={sousAsteriskPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={90}
+                        stroke="none"
+                      >
+                        {sousAsteriskPieData.map((d, idx) => (
+                          <Cell key={d.name} fill={palette.series[idx % palette.series.length]} />
                         ))}
                       </Pie>
                       <Legend formatter={(v) => <span style={{ color: palette.fg }}>{v}</span>} />

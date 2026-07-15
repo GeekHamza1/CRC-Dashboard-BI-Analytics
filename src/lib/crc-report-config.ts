@@ -5,6 +5,7 @@ export type CrcChartKey =
   | "geoDonut"
   | "statusPie"
   | "provincesPie"
+  | "soussPhonePie"
   | "dailyArea"
   | "monthlyBars"
   | "trendLine"
@@ -20,6 +21,9 @@ export type CrcKpiKey =
   | "informes"
   | "tickets"
   | "teleopsDistinct"
+  | "avgWaitingTime"
+  | "clientsWaited"
+  | "pctClientsWaited"
   | "pctInformes"
   | "pctTickets"
   | "coverage";
@@ -88,6 +92,7 @@ export const CRC_CHART_KEYS = [
   "geoDonut",
   "statusPie",
   "provincesPie",
+  "soussPhonePie",
   "dailyArea",
   "monthlyBars",
   "trendLine",
@@ -110,6 +115,9 @@ export const CRC_KPI_KEYS = [
   "informes",
   "tickets",
   "teleopsDistinct",
+  "avgWaitingTime",
+  "clientsWaited",
+  "pctClientsWaited",
   "pctInformes",
   "pctTickets",
   "coverage",
