@@ -243,8 +243,8 @@ export async function exportCrcPdf(
     );
     drawKpiCard(doc, 170, 34, 32, 15, "Total appels", k.totalAppels, "#f97316");
     drawKpiCard(doc, 10, 52, 60, 15, "Temps d'attente moyen", k.avgWaitingTime, "#0f766e");
-    drawKpiCard(doc, 72, 52, 60, 15, "Clients ayant attendu", k.totalClientsWaited, "#6366f1");
-    drawKpiCard(doc, 134, 52, 60, 15, "% clients ayant attendu", `${k.pctClientsWaited.toFixed(1)} %`, "#8b5cf6");
+    drawKpiCard(doc, 72, 52, 60, 15, "Appels orientés vers la file d’attente.", k.totalClientsWaited, "#6366f1");
+    drawKpiCard(doc, 134, 52, 60, 15, "% d'appels orientés vers la file d’attente.", `${k.pctClientsWaited.toFixed(1)} %`, "#8b5cf6");
     cursor = 70;
   }
 

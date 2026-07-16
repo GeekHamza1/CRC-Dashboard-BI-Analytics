@@ -95,7 +95,10 @@ export function CrcRegionPivotWidget(props: {
   const chartRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  const shorts = useMemo(() => activeRegionShorts(regionVisibility), [regionVisibility]);
+  const shorts = useMemo(() => {
+    const allShorts = activeRegionShorts(regionVisibility);
+    return allShorts.filter((s) => rows.some((row) => numericValue(row, s) > 0));
+  }, [regionVisibility, rows]);
 
   const chartRows = useMemo(() => {
     return rows.map((row) => {

@@ -20,7 +20,7 @@ export const REGION_COLORS: Record<CanonicalRegion, string> = {
 export const REGION_SHORT: Record<CanonicalRegion, string> = {
   "Drâa-Tafilalet": "Drâa",
   "Laâyoune-Sakia El Hamra": "Laâyoune",
-  "Souss-Massa": "Souss",
+  "Souss-Massa": "Souss Massa",
   "Inconnu": "Inconnu",
 };
 

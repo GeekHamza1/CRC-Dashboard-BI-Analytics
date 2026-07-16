@@ -97,7 +97,11 @@ export function countMap(keys: string[]) {
   return m;
 }
 
-function parseQueueSeconds(value: string | null | undefined): number | null {
+export function activeCanonicalRegions(rows: CrcRow[]): CanonicalRegion[] {
+  return REGION_ORDER.filter((region) => rows.some((row) => row.régionCanon === region));
+}
+
+export function parseQueueSeconds(value: string | null | undefined): number | null {
   if (value == null) return null;
   const raw = String(value).trim();
   if (!raw) return null;
@@ -112,6 +116,11 @@ function parseQueueSeconds(value: string | null | undefined): number | null {
   if (parts.length === 2) return parts[0] * 60 + parts[1];
   if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
   return null;
+}
+
+export function rowHasQueueWait(row: CrcRow): boolean {
+  const secs = parseQueueSeconds(row.tempsAttenteQueue);
+  return secs != null && secs > 1;
 }
 
 export function formatDurationSeconds(totalSeconds: number): string {
@@ -166,6 +175,7 @@ export function pivotRésultatParRégion(rows: CrcRow[]) {
     "Clients informés",
     "Tickets transmis",
   ];
+  const regions = activeCanonicalRegions(rows);
   const keys = [...new Set(rows.map((r) => r.résultat))];
   keys.sort((a, b) => {
     const ia = order.indexOf(a);
@@ -177,14 +187,14 @@ export function pivotRésultatParRégion(rows: CrcRow[]) {
   });
   const matrix: Record<string, Record<string, number>> = {};
   keys.forEach((k) => {
-    matrix[k] = Object.fromEntries(REGION_ORDER.map((r) => [REGION_SHORT[r], 0])) as Record<
+    matrix[k] = Object.fromEntries(regions.map((r) => [REGION_SHORT[r], 0])) as Record<
       string,
       number
     >;
   });
   rows.forEach((r) => {
     const rk = r.résultat;
-    matrix[rk] ??= Object.fromEntries(REGION_ORDER.map((x) => [REGION_SHORT[x], 0])) as Record<
+    matrix[rk] ??= Object.fromEntries(regions.map((x) => [REGION_SHORT[x], 0])) as Record<
       string,
       number
     >;
@@ -195,9 +205,10 @@ export function pivotRésultatParRégion(rows: CrcRow[]) {
 
 export function pivotMétierParRégion(rows: CrcRow[]) {
   const metiers = [...new Set(rows.map((r) => r.metier))].sort((a, b) => a.localeCompare(b, "fr"));
+  const regions = activeCanonicalRegions(rows);
   return metiers.map((m) => {
     const out: Record<string, number | string> = { métier: m };
-    REGION_ORDER.forEach((rg) => {
+    regions.forEach((rg) => {
       out[REGION_SHORT[rg]] = rows.filter((r) => r.metier === m && r.régionCanon === rg).length;
     });
     return out;
@@ -208,9 +219,10 @@ export function pivotNatureParRégion(rows: CrcRow[]) {
   const natures = [...new Set(rows.map((r) => r.natureRéclamation))].sort((a, b) =>
     a.localeCompare(b, "fr"),
   );
+  const regions = activeCanonicalRegions(rows);
   return natures.map((n) => {
     const out: Record<string, number | string> = { nature: n };
-    REGION_ORDER.forEach((rg) => {
+    regions.forEach((rg) => {
       out[REGION_SHORT[rg]] = rows.filter(
         (r) => r.natureRéclamation === n && r.régionCanon === rg,
       ).length;
@@ -221,11 +233,12 @@ export function pivotNatureParRégion(rows: CrcRow[]) {
 
 /** Provinces aggregation per region — returns map of region → sorted provinces list */
 export function provincesParRégion(rows: CrcRow[]) {
+  const regions = activeCanonicalRegions(rows);
   const result: Record<CanonicalRegion, [string, number][]> = Object.fromEntries(
-    REGION_ORDER.map((region) => [region, [] as [string, number][]]),
+    regions.map((region) => [region, [] as [string, number][]]),
   ) as Record<CanonicalRegion, [string, number][]>;
   
-  REGION_ORDER.forEach((region) => {
+  regions.forEach((region) => {
     const regionRows = rows.filter((r) => r.régionCanon === region);
     const provinces = countMap(regionRows.map((r) => r.provinces));
     result[region] = [...provinces.entries()].sort((a, b) => b[1] - a[1]);
@@ -234,23 +247,24 @@ export function provincesParRégion(rows: CrcRow[]) {
   return result;
 }
 
-function zeroRegionCounts(): Record<CanonicalRegion, number> {
-  return Object.fromEntries(REGION_ORDER.map((r) => [r, 0])) as Record<CanonicalRegion, number>;
+function zeroRegionCounts(rows: CrcRow[]): Record<CanonicalRegion, number> {
+  return Object.fromEntries(activeCanonicalRegions(rows).map((r) => [r, 0])) as Record<CanonicalRegion, number>;
 }
 
 export function dailySeries(rows: CrcRow[]) {
   const bucket = new Map<string, Record<CanonicalRegion, number>>();
+  const regions = activeCanonicalRegions(rows);
   rows.forEach((r) => {
     if (!r.date) return;
     const key = ymd(r.date);
-    const hit = bucket.get(key) ?? zeroRegionCounts();
+    const hit = bucket.get(key) ?? zeroRegionCounts(rows);
     hit[r.régionCanon] += 1;
     bucket.set(key, hit);
   });
   return [...bucket.keys()].sort().map((jour) => {
     const d = bucket.get(jour)!;
     const out: Record<string, string | number> = { jour, total: 0 };
-    REGION_ORDER.forEach((rg) => {
+    regions.forEach((rg) => {
       out[REGION_SHORT[rg]] = d[rg];
       out.total = Number(out.total) + d[rg];
     });
@@ -313,6 +327,7 @@ function parseMonthLabel(label: string): number {
 
 export function monthlySeries(rows: CrcRow[]) {
   const bucket = new Map<string, Record<CanonicalRegion, number>>();
+  const regions = activeCanonicalRegions(rows);
   rows.forEach((r) => {
     const month =
       r.moisLabel?.trim() && r.moisLabel !== NON_RENSEIGNE
@@ -327,7 +342,7 @@ export function monthlySeries(rows: CrcRow[]) {
       ) {
         return;
       }
-    const hit = bucket.get(month) ?? zeroRegionCounts();
+    const hit = bucket.get(month) ?? zeroRegionCounts(rows);
     hit[r.régionCanon] += 1;
     bucket.set(month, hit);
   });
@@ -336,7 +351,7 @@ return [...bucket.keys()]
   .map((mois) => {
     const d = bucket.get(mois)!;
     const out: Record<string, string | number> = { mois, total: 0 };
-    REGION_ORDER.forEach((rg) => {
+    regions.forEach((rg) => {
       out[REGION_SHORT[rg]] = d[rg];
       out.total = Number(out.total) + d[rg];
     });

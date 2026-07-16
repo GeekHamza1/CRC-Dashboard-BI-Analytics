@@ -53,8 +53,8 @@ export function exportCrcExcel(
       ["Clients informés", kpis.clientsInformés],
       ["Tickets transmis", kpis.ticketsTransmis],
       ["Temps d'attente moyen", kpis.avgWaitingTime],
-      ["Clients ayant attendu", kpis.totalClientsWaited],
-      ["% clients ayant attendu", `${kpis.pctClientsWaited.toFixed(1)} %`],
+      ["Appels orientés vers la file d’attente.", kpis.totalClientsWaited],
+      ["% d'appels orientés vers la file d’attente.", `${kpis.pctClientsWaited.toFixed(1)} %`],
       ...REGION_ORDER.map((rg): [string, number] => [
         `Appels — ${REGION_SHORT[rg]}`,
         kpis.appelsParRégion.get(rg) ?? 0,

@@ -129,7 +129,7 @@ export async function buildAndSaveCrcPptx(
     addSlideHeader(
       rc,
       "Régions — répartition par résultat",
-      "Drâa · Laâyoune · Souss · Inconnu — graphiques éditables (même palette familles CRC)",
+      "Drâa · Laâyoune · Souss-Massa· Inconnu — graphiques éditables (même palette familles CRC)",
       logoDataUrl,
     );
     const boxes: { x: number; y: number; w: number; h: number }[] = [

@@ -132,7 +132,7 @@ export function CrcRawPreviewWidget(props: {
 
   const regionChartRows = useMemo(
     () =>
-      REGION_ORDER.map((rg) => ({
+      REGION_ORDER.filter((rg) => rows.some((r) => r.régionCanon === rg)).map((rg) => ({
         label: REGION_SHORT[rg],
         value: rows.filter((r) => r.régionCanon === rg).length,
         fill: REGION_COLORS[rg],
@@ -142,7 +142,7 @@ export function CrcRawPreviewWidget(props: {
 
   const pieRegion = useMemo(
     () =>
-      REGION_ORDER.map((rg) => ({
+      REGION_ORDER.filter((rg) => rows.some((r) => r.régionCanon === rg)).map((rg) => ({
         name: REGION_SHORT[rg],
         value: rows.filter((r) => r.régionCanon === rg).length,
         fill: REGION_COLORS[rg],

@@ -30,9 +30,11 @@ import {
   isEmptyField,
   monthlySeries,
   operatorRanking,
+  parseQueueSeconds,
   pivotMétierParRégion,
   pivotNatureParRégion,
   pivotRésultatParRégion,
+  rowHasQueueWait,
   type DashboardFilters,
 } from "@/lib/crc-analytics";
 import {
@@ -95,15 +97,17 @@ function GlassCard({
   accent,
   children,
   action,
+  className,
 }: {
   title?: string;
   subtitle?: string;
   accent?: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="glass-panel p-5 sm:p-6 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-900/10 dark:hover:shadow-slate-950/40 motion-safe:animate-fade-in">
+    <section className={`glass-panel p-5 sm:p-6 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-900/10 dark:hover:shadow-slate-950/40 motion-safe:animate-fade-in ${className ?? ""}`.trim()}>
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between mb-4">
         <div>
           {title && (
@@ -148,13 +152,14 @@ const CHART_LABEL_FR: Record<CrcChartKey, string> = {
   geoBars: "Histogramme régions canon",
   geoDonut: "Donut géographique",
   statusPie: "Camembert résultats (libellés standardisés)",
+  waitedResultPie: "Résultats des Appels orientés vers la file d’attente.",
   provincesPie: "Camemberts provinces par région",
-  soussPhonePie: "Camembert Souss — téléphone ligne Verte / Ligne Analogique DPIA",
+  soussPhonePie: "Camembert Souss-Massa— téléphone ligne Verte / Ligne Analogique DPIA",
   dailyArea: "Courbes cumulées par jour",
   monthlyBars: "Barres empilées par mois",
   trendLine: "Tendance totale jour",
   teleopBars: "Classement téléopérateurs (diagramme)",
-  regionCards: "Cartes région Drâa / Laâyoune / Souss / Inconnu",
+  regionCards: "Cartes région Drâa / Laâyoune / Souss-Massa/ Inconnu",
 };
 
 const TABLE_LABEL_FR: Record<CrcTableKey, string> = {
@@ -203,8 +208,8 @@ const KPI_LABEL_FR: Record<CrcKpiKey, string> = {
   tickets: "Tickets transmis",
   teleopsDistinct: "Téléopérateurs actifs",
   avgWaitingTime: "Temps d'attente moyen",
-  clientsWaited: "Clients ayant attendu",
-  pctClientsWaited: "% clients ayant attendu",
+  clientsWaited: "Appels orientés vers la file d’attente.",
+  pctClientsWaited: "% d'appels orientés vers la file d’attente.",
   pctInformes: "Part clients informés",
   pctTickets: "% tickets transmis",
   coverage: "Couverture filtre",
@@ -351,6 +356,11 @@ export default function CrcDashboard() {
 
   const filteredRows = useMemo(() => applyFilters(rows, effectiveFilters), [rows, effectiveFilters]);
   const [metierResultatFilter, setMetierResultatFilter] = useState("all");
+
+  const visibleRegions = useMemo(
+    () => REGION_ORDER.filter((region) => filteredRows.some((row) => row.régionCanon === region)),
+    [filteredRows],
+  );
 
   const kpis = useMemo(() => globalKpis(filteredRows), [filteredRows]);
   const pivotResult = useMemo(() => pivotRésultatParRégion(filteredRows), [filteredRows]);
@@ -536,7 +546,7 @@ const chartTooltip = (
   />
 );
 
-  const donutRég = REGION_ORDER.map((rg) => ({
+  const donutRég = visibleRegions.map((rg) => ({
     name: REGION_SHORT[rg],
     value: kpis.appelsParRégion.get(rg) ?? 0,
     fill: REGION_COLORS[rg],
@@ -553,6 +563,38 @@ const chartTooltip = (
       }))
       .filter((d) => d.value > 0);
   }, [filteredRows]);
+
+  const waitedResultPieData = useMemo(() => {
+    const waited = filteredRows.filter((r) => rowHasQueueWait(r));
+    const buckets = waited.map((r) => r.résultat);
+    const uniq = [...new Set(buckets)].sort(compareResultBuckets);
+    return uniq
+      .map((name) => ({
+        name,
+        value: buckets.filter((x) => x === name).length,
+        fill: getResultColor(name),
+      }))
+      .filter((d) => d.value > 0);
+  }, [filteredRows]);
+
+  const waitedTimeBuckets = useMemo(
+    () => {
+      const buckets = [
+        { label: "2–30 s", min: 2, max: 30, count: 0 },
+        { label: "31–60 s", min: 31, max: 60, count: 0 },
+        { label: "61–120 s", min: 61, max: 120, count: 0 },
+        { label: "121+ s", min: 121, max: Infinity, count: 0 },
+      ];
+      for (const row of filteredRows) {
+        const secs = parseQueueSeconds(row.tempsAttenteQueue);
+        if (secs == null || secs < 2) continue;
+        const bucket = buckets.find((b) => secs >= b.min && secs <= b.max);
+        if (bucket) bucket.count += 1;
+      }
+      return buckets;
+    },
+    [filteredRows],
+  );
 
   const isAsteriskPhone = (phone: string) => {
     const normalized = String(phone ?? "").trim();
@@ -1211,11 +1253,17 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {kpiTiles.map((tile) => {
                 const clickable = ["abandons", "decrochesInterrompus", "informes", "tickets"].includes(tile.key);
+                const isAbandonAlert = tile.key === "abandons" && typeof tile.body === "number" && tile.body > 1;
                 return (
                   <GlassCard
                     key={tile.key}
                     title={tile.title}
                     subtitle={tile.subtitle}
+                    className={
+                      isAbandonAlert
+                        ? "border border-red-300/80 bg-red-50/90 shadow-red-100 dark:border-red-700/60 dark:bg-red-950/25 dark:shadow-red-950/20"
+                        : undefined
+                    }
                     action={
                       clickable ? (
                         <button
@@ -1238,7 +1286,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       ) : null
                     }
                   >
-                    <div className="text-4xl font-bold tabular-nums text-indigo-600 dark:text-indigo-300 mt-2">
+                    <div className={`text-4xl font-bold tabular-nums mt-2 ${isAbandonAlert ? "text-red-600 dark:text-red-300" : "text-indigo-600 dark:text-indigo-300"}`}>
                       {tile.body}
                     </div>
                   </GlassCard>
@@ -1252,13 +1300,13 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               <GlassCard title="Interactions par région canon" subtitle="Colonnes alignées Reporting Power BI">
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={REGION_ORDER.map((rg) => ({ lib: REGION_SHORT[rg], v: kpis.appelsParRégion.get(rg) ?? 0 }))}>
+                    <BarChart data={visibleRegions.map((rg) => ({ lib: REGION_SHORT[rg], v: kpis.appelsParRégion.get(rg) ?? 0 }))}>
                       <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
                       <XAxis tick={{ fill: palette.muted, fontSize: 11 }} dataKey="lib" />
                       <YAxis tick={{ fill: palette.muted, fontSize: 11 }} />
                       {chartTooltip}
                       <Bar dataKey="v" radius={[10, 10, 4, 4]}>
-                        {REGION_ORDER.map((rg) => (
+                        {visibleRegions.map((rg) => (
                           <Cell key={rg} fill={REGION_COLORS[rg]} opacity={isDark ? 0.94 : 0.92} />
                         ))}
                       </Bar>
@@ -1301,8 +1349,41 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                 </div>
               </GlassCard>
             ) : null}
+            {reportConfig.charts.waitedResultPie ? (
+              <div className="xl:col-span-3">
+                <GlassCard title="Résultats des Appels orientés vers la file d’attente." subtitle="Distribution des résultats et buckets de temps d’attente">
+                  <div className="grid gap-4 xl:grid-cols-[1.45fr_minmax(280px,340px)]">
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={waitedResultPieData} dataKey="value" cx="48%" outerRadius={100} stroke="none">
+                            {waitedResultPieData.map((d) => (
+                              <Cell key={d.name} fill={d.fill} />
+                            ))}
+                          </Pie>
+                          <Legend formatter={(v) => <span style={{ color: palette.fg }}>{v}</span>} />
+                          {chartTooltip}
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
+                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Buckets de temps d’attente</div>
+                      <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                        {waitedTimeBuckets.map((bucket) => (
+                          <div key={bucket.label} className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 border border-slate-200 dark:bg-slate-900/80 dark:border-slate-700">
+                            <span>{bucket.label}</span>
+                            <span className="font-semibold tabular-nums">{bucket.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </GlassCard>
+              </div>
+            ) : null}
             {reportConfig.charts.soussPhonePie ? (
-              <GlassCard title="Appels Souss" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
+              <GlassCard title="Appels Souss Massa" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -1344,7 +1425,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                         <YAxis tick={{ fill: palette.muted }} />
                         <Legend />
                         {chartTooltip}
-                        {REGION_ORDER.map((rg) => (
+                        {visibleRegions.map((rg) => (
                           <Area
                             key={rg}
                             type="monotone"
@@ -1378,7 +1459,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                         <YAxis tick={{ fill: palette.muted }} />
                         <Legend />
                         {chartTooltip}
-                        {REGION_ORDER.map((rg) => (
+                        {visibleRegions.map((rg) => (
                           <Bar key={rg} stackId="m" dataKey={REGION_SHORT[rg]} fill={REGION_COLORS[rg]} />
                         ))}
                       </BarChart>
@@ -1416,7 +1497,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             <CrcRegionPivotWidget
               widgetId="pivotResult"
               title="1. Pivot Résultat × Régions"
-              subtitle="Colonnes géographiques Drâa • Laâyoune • Souss • Inconnu · familles depuis le résultat normalisé."
+              subtitle="Colonnes géographiques Drâa • Laâyoune • Souss-Massa• Inconnu · familles depuis le résultat normalisé."
               labelHeader="Résultat"
               rowLabelKey="name"
               rows={pivotResult}
@@ -1561,7 +1642,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
           {reportConfig.charts.regionCards ? (
             <div className="grid xl:grid-cols-3 gap-4">
-              {REGION_ORDER.map((rg) => (
+              {visibleRegions.map((rg) => (
                 <CrcRegionResultCardWidget
                   key={rg}
                   region={rg}

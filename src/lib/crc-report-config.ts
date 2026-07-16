@@ -4,6 +4,7 @@ export type CrcChartKey =
   | "geoBars"
   | "geoDonut"
   | "statusPie"
+  | "waitedResultPie"
   | "provincesPie"
   | "soussPhonePie"
   | "dailyArea"
@@ -91,6 +92,7 @@ export const CRC_CHART_KEYS = [
   "geoBars",
   "geoDonut",
   "statusPie",
+  "waitedResultPie",
   "provincesPie",
   "soussPhonePie",
   "dailyArea",
