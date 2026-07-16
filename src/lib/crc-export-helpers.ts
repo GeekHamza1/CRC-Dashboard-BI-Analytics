@@ -19,13 +19,12 @@ export type PivotRegionRow = {
   [regionShort: string]: string | number | undefined;
 };
 
-const TELE_KEYS = ["volume", "abandons", "appelsDécrochésInterrompus", "informés", "tickets"] as const;
+const TELE_KEYS = ["volume", "appelsDécrochésInterrompus", "informés", "tickets"] as const;
 export type TeleOpMetricKey = (typeof TELE_KEYS)[number];
 
 export const TELEOP_COLUMN_DEFS: { key: TeleOpMetricKey | "name"; label: string }[] = [
   { key: "name", label: "Téléopérateur" },
   { key: "volume", label: "Volume" },
-  { key: "abandons", label: "Appels abandonnés" },
   { key: "appelsDécrochésInterrompus", label: "Appels décrochés interrompus" },
   { key: "informés", label: "Clients informés" },
   { key: "tickets", label: "Tickets transmis" },
@@ -100,7 +99,6 @@ export function filterOperatorRow(
   for (const k of metrics) {
     if (k === "appelsDécrochésInterrompus") out[k] = o.appelsDécrochésInterrompus ?? 0;
     else if (k === "volume") out[k] = o.volume;
-    else if (k === "abandons") out[k] = o.abandons;
     else if (k === "informés") out[k] = o.informés;
     else if (k === "tickets") out[k] = o.tickets;
   }

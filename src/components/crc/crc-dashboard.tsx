@@ -581,9 +581,9 @@ const chartTooltip = (
     () => {
       const buckets = [
         { label: "2–30 s", min: 2, max: 30, count: 0 },
-        { label: "31–60 s", min: 31, max: 60, count: 0 },
-        { label: "61–120 s", min: 61, max: 120, count: 0 },
-        { label: "121+ s", min: 121, max: Infinity, count: 0 },
+        { label: "31–60 s (0,5–1 min)", min: 31, max: 60, count: 0 },
+        { label: "61–120 s (1–2 min)", min: 61, max: 120, count: 0 },
+        { label: "121+ s (2+ min)", min: 121, max: Infinity, count: 0 },
       ];
       for (const row of filteredRows) {
         const secs = parseQueueSeconds(row.tempsAttenteQueue);
@@ -1383,29 +1383,31 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               </div>
             ) : null}
             {reportConfig.charts.soussPhonePie ? (
-              <GlassCard title="Appels Souss Massa" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={sousAsteriskPieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        stroke="none"
-                      >
-                        {sousAsteriskPieData.map((d, idx) => (
-                          <Cell key={d.name} fill={palette.series[idx % palette.series.length]} />
-                        ))}
-                      </Pie>
-                      <Legend formatter={(v) => <span style={{ color: palette.fg }}>{v}</span>} />
-                      {chartTooltip}
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </GlassCard>
+              <div className="xl:col-span-3">
+                <GlassCard className="w-full" title="Appels Souss Massa" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
+                  <div className="h-96">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={sousAsteriskPieData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={120}
+                          stroke="none"
+                        >
+                          {sousAsteriskPieData.map((d, idx) => (
+                            <Cell key={d.name} fill={palette.series[idx % palette.series.length]} />
+                          ))}
+                        </Pie>
+                        <Legend formatter={(v) => <span style={{ color: palette.fg }}>{v}</span>} />
+                        {chartTooltip}
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </GlassCard>
+              </div>
             ) : null}
           </div>
 
@@ -1605,13 +1607,6 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
   dataKey="tickets"
   fill={getResultColor("Tickets transmis")}
   name="Tickets transmis"
-  maxBarSize={14}
-/>
-
-<Bar
-  dataKey="abandons"
-  fill={getResultColor("Appels abandonnés")}
-  name="Appels abandonnés"
   maxBarSize={14}
 />
 

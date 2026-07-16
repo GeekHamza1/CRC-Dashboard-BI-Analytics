@@ -27,8 +27,7 @@ import { captureElementPng, exportTeleOpExcel, exportTeleOpPdf, exportTeleOpPptx
 import type { PivotChartKind } from "./crc-region-pivot-widget";
 
 const METRIC_LABEL: Record<TeleOpMetricKey, string> = {
-  volume: "Volume",
-  abandons: "Appels abandonnés",
+  volume: "Traitments",
   appelsDécrochésInterrompus: "Appels décrochés interrompus",
   informés: "Clients informés",
   tickets: "Tickets transmis",
@@ -36,7 +35,6 @@ const METRIC_LABEL: Record<TeleOpMetricKey, string> = {
 
 const METRIC_COLOR: Record<TeleOpMetricKey, string> = {
   volume: AGGREGATE_VOLUME_BAR,
-  abandons: RESULT_COLORS["Appels abandonnés"],
   appelsDécrochésInterrompus: RESULT_COLORS["Appels décrochés interrompus"],
   informés: RESULT_COLORS["Clients informés"],
   tickets: RESULT_COLORS["Tickets transmis"],
@@ -115,7 +113,7 @@ export function CrcTeleopStatsWidget(props: {
     }));
   }, [rows, keys]);
 
-  const metricKeysList = (["volume", "abandons", "appelsDécrochésInterrompus", "informés", "tickets"] as const);
+  const metricKeysList = (["volume", "appelsDécrochésInterrompus", "informés", "tickets"] as const);
 
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2 mb-4 pb-3 border-b border-slate-200/70 dark:border-slate-700/60">

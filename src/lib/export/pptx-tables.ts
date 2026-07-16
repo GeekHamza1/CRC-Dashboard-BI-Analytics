@@ -84,7 +84,6 @@ export function teleopTableRows(
   ops: {
     name: string;
     volume: number;
-    abandons: number;
     appelsDécrochésInterrompus: number;
     informés: number;
     tickets: number;
@@ -93,14 +92,12 @@ export function teleopTableRows(
 ) {
   const short: Record<string, string> = {
     volume: "Volume",
-    abandons: "Abandons",
     appelsDécrochésInterrompus: "Décrochés",
     informés: "Informés",
     tickets: "Tickets",
   };
   const teleColor: Record<string, string> = {
     volume: AGGREGATE_VOLUME_BAR,
-    abandons: RESULT_COLORS["Appels abandonnés"],
     appelsDécrochésInterrompus: RESULT_COLORS["Appels décrochés interrompus"],
     informés: RESULT_COLORS["Clients informés"],
     tickets: RESULT_COLORS["Tickets transmis"],

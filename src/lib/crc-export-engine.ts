@@ -170,7 +170,6 @@ export function exportTeleOpExcel(ops: OperatorRankRow[], metricKeys: string[], 
   const defs = [
     { key: "name", label: "Téléopérateur" },
     { key: "volume", label: "Volume" },
-    { key: "abandons", label: "Appels abandonnés" },
     { key: "appelsDécrochésInterrompus", label: "Appels décrochés interrompus" },
     { key: "informés", label: "Clients informés" },
     { key: "tickets", label: "Tickets transmis" },
@@ -229,7 +228,6 @@ export async function exportTeleOpPdf(ops: OperatorRankRow[], metricKeys: string
 function labelForTeleKey(k: string) {
   const m: Record<string, string> = {
     volume: "Volume",
-    abandons: "Appels abandonnés",
     appelsDécrochésInterrompus: "Appels décrochés interrompus",
     informés: "Clients informés",
     tickets: "Tickets transmis",
@@ -240,7 +238,6 @@ function labelForTeleKey(k: string) {
 function colorForTeleKey(k: string) {
   const m: Record<string, string> = {
     volume: AGGREGATE_VOLUME_BAR,
-    abandons: RESULT_COLORS["Appels abandonnés"],
     appelsDécrochésInterrompus: RESULT_COLORS["Appels décrochés interrompus"],
     informés: RESULT_COLORS["Clients informés"],
     tickets: RESULT_COLORS["Tickets transmis"],

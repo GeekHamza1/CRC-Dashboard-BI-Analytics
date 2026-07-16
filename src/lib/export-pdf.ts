@@ -402,7 +402,7 @@ export async function exportCrcPdf(
     drawHeaderBand(
       doc,
       "Statistiques des Téléopérateurs",
-      "Colonnes depuis le champ Résultat (normalisé) — familles Appels abandonnés / décrochés / informés / tickets",
+      "Colonnes depuis le champ Résultat (normalisé) — familles décrochés / informés / tickets",
       logoDataUrl,
     );
 
@@ -425,7 +425,6 @@ export async function exportCrcPdf(
       ...teleKeys.map((key) => {
         const labels: Record<string, string> = {
           volume: "Volume",
-          abandons: "Appels abandonnés",
           appelsDécrochésInterrompus: "Appels décrochés interrompus",
           informés: "Clients informés",
           tickets: "Tickets transmis",
@@ -438,7 +437,6 @@ export async function exportCrcPdf(
       ...teleKeys.map((key) => {
         const m: Record<string, string> = {
           volume: AGGREGATE_VOLUME_BAR,
-          abandons: RESULT_COLORS["Appels abandonnés"],
           appelsDécrochésInterrompus: RESULT_COLORS["Appels décrochés interrompus"],
           informés: RESULT_COLORS["Clients informés"],
           tickets: RESULT_COLORS["Tickets transmis"],
