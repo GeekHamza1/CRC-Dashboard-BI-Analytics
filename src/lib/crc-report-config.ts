@@ -9,6 +9,7 @@ export type CrcChartKey =
   | "soussPhonePie"
   | "dailyArea"
   | "monthlyBars"
+  | "shiftBars"
   | "trendLine"
   | "teleopBars"
   | "regionCards";
@@ -97,6 +98,7 @@ export const CRC_CHART_KEYS = [
   "soussPhonePie",
   "dailyArea",
   "monthlyBars",
+  "shiftBars",
   "trendLine",
   "teleopBars",
   "regionCards",

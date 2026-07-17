@@ -7,6 +7,7 @@ import {
   type CanonicalRegion,
 } from "./crc-constants";
 import { normalizeResult, normalizeResultKey } from "./crc-normalize-result";
+import { compareResultBuckets } from "./constants/chart-colors";
 import type { CrcRow } from "./crc-types";
 
 export { CANONICAL_RESULT_LABELS, normalizeResult } from "./crc-normalize-result";
@@ -133,6 +134,79 @@ export function formatDurationSeconds(totalSeconds: number): string {
   const mm = String(minutes).padStart(2, "0");
   const ss = String(seconds).padStart(2, "0");
   return `${hh}:${mm}:${ss}`;
+}
+
+export interface ShiftResultBucket extends Record<string, number | string> {
+  label: string;
+  count: number;
+}
+
+export interface ShiftResultDistribution {
+  data: ShiftResultBucket[];
+  resultLabels: string[];
+}
+
+export function shiftBuckets(rows: CrcRow[]) {
+  const buckets = [
+    { label: "00h–08h", min: 0, max: 7, count: 0 },
+    { label: "08h–16h", min: 8, max: 15, count: 0 },
+    { label: "16h–00h", min: 16, max: 23, count: 0 },
+  ];
+
+  rows.forEach((row) => {
+    if (!row.date) return;
+    const hour = row.date.getHours();
+    const bucket = buckets.find((b) => hour >= b.min && hour <= b.max);
+    if (bucket) bucket.count += 1;
+  });
+
+  return buckets;
+}
+
+export function shiftResultDistribution(rows: CrcRow[]): ShiftResultDistribution {
+  const buckets = [
+    { label: "00h–08h", min: 0, max: 7 },
+    { label: "08h–16h", min: 8, max: 15 },
+    { label: "16h–00h", min: 16, max: 23 },
+  ];
+
+  const resultLabels = new Set<string>();
+  rows.forEach((row) => {
+    if (!row.date) return;
+    const result = row.résultat || NON_RENSEIGNE;
+    resultLabels.add(result);
+  });
+
+  const sortedResultLabels = [...resultLabels].sort(compareResultBuckets);
+  const distribution: ShiftResultBucket[] = buckets.map((bucket) => {
+    const row: ShiftResultBucket = {
+      label: bucket.label,
+      count: 0,
+    };
+    sortedResultLabels.forEach((result) => {
+      row[result] = 0;
+    });
+    return row;
+  });
+
+  rows.forEach((row) => {
+    if (!row.date) return;
+    const hour = row.date.getHours();
+    const bucket = distribution.find((b, index) => {
+      const def = buckets[index];
+      return hour >= def.min && hour <= def.max;
+    });
+    if (!bucket) return;
+
+    const result = row.résultat || NON_RENSEIGNE;
+    bucket.count += 1;
+    bucket[result] = (bucket[result] as number) + 1;
+  });
+
+  return {
+    data: distribution,
+    resultLabels: sortedResultLabels,
+  };
 }
 
 export function globalKpis(rows: CrcRow[]) {

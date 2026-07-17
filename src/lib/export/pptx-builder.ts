@@ -168,7 +168,7 @@ export async function buildAndSaveCrcPptx(
     addSlideHeader(
       res,
       "Résultat & dynamiques",
-      "Graphiques natifs + tableau pivot (colonnes visibles cockpit)",
+      "Graphiques natifs + tableau de résultats (colonnes visibles cockpit)",
       logoDataUrl,
     );
 

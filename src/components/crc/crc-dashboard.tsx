@@ -35,6 +35,8 @@ import {
   pivotNatureParRégion,
   pivotRésultatParRégion,
   rowHasQueueWait,
+  shiftBuckets,
+  shiftResultDistribution,
   type DashboardFilters,
 } from "@/lib/crc-analytics";
 import {
@@ -150,22 +152,23 @@ function parseMulti(select: HTMLSelectElement) {
 
 const CHART_LABEL_FR: Record<CrcChartKey, string> = {
   geoBars: "Histogramme régions canon",
-  geoDonut: "Donut géographique",
+  geoDonut: "Répartition géographique",
   statusPie: "Camembert résultats (libellés standardisés)",
   waitedResultPie: "Résultats des Appels orientés vers la file d’attente.",
   provincesPie: "Camemberts provinces par région",
   soussPhonePie: "Camembert Souss-Massa— téléphone ligne Verte / Ligne Analogique DPIA",
   dailyArea: "Courbes cumulées par jour",
   monthlyBars: "Barres empilées par mois",
+  shiftBars: "Répartition shifts horaires",
   trendLine: "Tendance totale jour",
   teleopBars: "Classement téléopérateurs (diagramme)",
   regionCards: "Cartes région Drâa / Laâyoune / Souss-Massa/ Inconnu",
 };
 
 const TABLE_LABEL_FR: Record<CrcTableKey, string> = {
-  pivotResult: "Pivot Résultat × régions",
-  pivotMetier: "Pivot Métier × régions",
-  pivotNature: "Pivot Nature × régions",
+  pivotResult: "Résultat par région",
+  pivotMetier: "Métier par région",
+  pivotNature: "Nature par région",
   teleOpStats: "Table Statistiques téléopérateurs",
   rawPreview: "Grille brute (extrait)",
 };
@@ -173,7 +176,7 @@ const TABLE_LABEL_FR: Record<CrcTableKey, string> = {
 const PDF_BLOCK_LABELS: { id: PdfBundleKey; label: string }[] = [
   { id: "kpisCards", label: "PDF — Bandeau KPI (cartes synthèse)" },
   { id: "summaryCharts", label: "PDF — Graphes recap globaux (régions / résultat)" },
-  { id: "pivotResultTable", label: "PDF — Table Pivot Résultat × régions" },
+  { id: "pivotResultTable", label: "PDF — Tableau Résultat par région" },
   { id: "trendsCharts", label: "PDF — Courbes journalière & mensuelle" },
   { id: "metierNatureTables", label: "PDF — Tables Métier & Nature" },
   { id: "teleopPage", label: "PDF — Page téléopérateurs" },
@@ -183,9 +186,9 @@ const EXCEL_SHEET_LABELS: { id: ExcelSheetKey; label: string }[] = [
   { id: "readme", label: "Feuille README" },
   { id: "kpis", label: "Synthèse KPI" },
   { id: "flat", label: "Données brutes" },
-  { id: "pivotResult", label: "Pivot Résultat × régions" },
-  { id: "pivotMetier", label: "Pivot Métier × régions" },
-  { id: "pivotNature", label: "Pivot Nature × régions" },
+  { id: "pivotResult", label: "Résultat par région" },
+  { id: "pivotMetier", label: "Métier par région" },
+  { id: "pivotNature", label: "Nature par région" },
   { id: "operators", label: "Classement téléopérateurs" },
   { id: "daily", label: "Évolution journalière" },
   { id: "monthly", label: "Évolution mensuelle" },
@@ -304,6 +307,7 @@ export default function CrcDashboard() {
   const [busy, setBusy] = useState(false);
   const [filters, setFilters] = useState<DashboardFilters>(defaultDashboardFilters());
   const [debugOpen, setDebugOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const [exportUsesFilters, setExportUsesFilters] = useState(true);
 
   const onFile = async (files: FileList | null) => {
@@ -355,6 +359,7 @@ export default function CrcDashboard() {
   }, [filters, rows]);
 
   const filteredRows = useMemo(() => applyFilters(rows, effectiveFilters), [rows, effectiveFilters]);
+  const shiftDistribution = useMemo(() => shiftResultDistribution(filteredRows), [filteredRows]);
   const [metierResultatFilter, setMetierResultatFilter] = useState("all");
 
   const visibleRegions = useMemo(
@@ -735,7 +740,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             href="/business-intelligence"
             className="rounded-full px-3 py-2 text-xs font-semibold border border-slate-300 dark:border-slate-600"
           >
-            BI
+            Analyse
           </Link>
           <ThemeToggle />
           <button
@@ -843,248 +848,270 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             >
               PowerPoint
             </button>
+            <button
+              type="button"
+              onClick={() => setConfigOpen(true)}
+              className="rounded-2xl px-4 py-2 text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white"
+            >
+              Configuration du rapport
+            </button>
           </div>
         </div>
       </GlassCard>
 
-      <GlassCard
-        title="Configuration du rapport"
-        subtitle="Personnaliser titres/logo, colonnes grille, briques cockpit et sections exportées (PDF/PPTX/XLSX) — aucune ligne de code requise."
-      >
-        <div className="grid gap-6 xl:grid-cols-12">
-          <div className="space-y-4 xl:col-span-5">
-            <div>
-              <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Titre (exports structurés)
-              </p>
-              <input
-                className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-950/60 px-4 py-2 text-sm text-slate-900 dark:text-slate-50"
-                value={reportConfig.reportTitle}
-                placeholder="Laissé vide ⇒ libellés CRC automatiques."
-                onChange={(e) => persistReportConfig({ ...reportConfig, reportTitle: e.target.value })}
-              />
-            </div>
-            <div>
-              <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Sous-titre / mention légale
-              </p>
-              <input
-                className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-950/60 px-4 py-2 text-sm text-slate-900 dark:text-slate-50"
-                value={reportConfig.reportSubtitle}
-                placeholder='Exemple : "Agence XYZ — novembre 2025"'
-                onChange={(e) => persistReportConfig({ ...reportConfig, reportSubtitle: e.target.value })}
-              />
-            </div>
-            <div>
-              <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                Logo export (prioritaire sur `/srm-logo.png`)
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 px-4 py-2 text-xs font-semibold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70">
-                  Importer un logo PNG/JPEG
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={(ev) => {
-                      const file = ev.target.files?.[0];
-                      if (!file) return;
-                      const rd = new FileReader();
-                      rd.onload = () =>
-                        persistReportConfig({
-                          ...reportConfig,
-                          logoDataUrl: String(rd.result || ""),
-                        });
-                      rd.readAsDataURL(file);
-                    }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="rounded-2xl border border-slate-300 px-4 py-2 text-xs dark:border-slate-600 disabled:opacity-40"
-                  disabled={!reportConfig.logoDataUrl}
-                  onClick={() => persistReportConfig({ ...reportConfig, logoDataUrl: null })}
-                >
-                  Réinitialiser logo upload
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-5 xl:col-span-7">
-            <div>
-              <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                Afficher sur le tableau de bord
-              </p>
-              <div className="grid sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-1">
-                {CRC_CHART_KEYS.map((k) => (
-                  <label
-                    key={k}
-                    className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.charts[k]}
-                      onChange={(e) =>
-                        persistReportConfig({
-                          ...reportConfig,
-                          charts: { ...reportConfig.charts, [k]: e.target.checked },
-                        })
-                      }
-                    />
-                    <span>{CHART_LABEL_FR[k]}</span>
-                  </label>
-                ))}
-                <div className="sm:col-span-2 mt-2 text-[11px] font-semibold text-slate-500 uppercase">
-                  Tableaux cockpit
-                </div>
-                {CRC_TABLE_KEYS.map((k) => (
-                  <label
-                    key={k}
-                    className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.tables[k]}
-                      onChange={(e) =>
-                        persistReportConfig({
-                          ...reportConfig,
-                          tables: { ...reportConfig.tables, [k]: e.target.checked },
-                        })
-                      }
-                    />
-                    <span>{TABLE_LABEL_FR[k]}</span>
-                  </label>
-                ))}
-                <div className="sm:col-span-2 mt-2 text-[11px] font-semibold text-slate-500 uppercase">
-                  Cartes KPI
-                </div>
-                {CRC_KPI_KEYS.map((k) => (
-                  <label
-                    key={k}
-                    className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.kpis[k]}
-                      onChange={(e) =>
-                        persistReportConfig({
-                          ...reportConfig,
-                          kpis: { ...reportConfig.kpis, [k]: e.target.checked },
-                        })
-                      }
-                    />
-                    <span>{KPI_LABEL_FR[k]}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                Colonnes visibles grille brute
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {RAW_COLUMN_KEYS.map((col) => (
-                  <label
-                    key={col}
-                    className="flex items-center gap-1 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 text-[11px]"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.rawColumns[col]}
-                      onChange={(e) =>
-                        persistReportConfig({
-                          ...reportConfig,
-                          rawColumns: { ...reportConfig.rawColumns, [col]: e.target.checked },
-                        })
-                      }
-                    />
-                    {RAW_PREVIEW_COLUMNS.find((c) => c.key === col)?.label ?? col}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="xl:col-span-12 grid lg:grid-cols-3 gap-4 pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
-            <div>
-              <p className="text-xs uppercase font-semibold mb-2 text-orange-700 dark:text-orange-200">
-                Sections PDF export
-              </p>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {PDF_BLOCK_LABELS.map(({ id, label }) => (
-                  <label key={id} className="flex gap-2 text-xs items-start leading-snug">
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.exportPdf[id]}
-                      onChange={(e) =>
-                        persistReportConfig({
-                          ...reportConfig,
-                          exportPdf: { ...reportConfig.exportPdf, [id]: e.target.checked },
-                        })
-                      }
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs uppercase font-semibold mb-2 text-emerald-700 dark:text-emerald-200">
-                Feuilles Excel export
-              </p>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {EXCEL_SHEET_LABELS.map(({ id, label }) => (
-                  <label key={id} className="flex gap-2 text-xs items-start leading-snug">
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.exportExcelSheets[id]}
-                      onChange={(e) =>
-                        persistReportConfig({
-                          ...reportConfig,
-                          exportExcelSheets: { ...reportConfig.exportExcelSheets, [id]: e.target.checked },
-                        })
-                      }
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs uppercase font-semibold mb-2 text-purple-700 dark:text-purple-200">
-                Diapositives PowerPoint
-              </p>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {PPTX_BLOCK_LABELS.map(({ id, label }) => (
-                  <label key={id} className="flex gap-2 text-xs items-start leading-snug">
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.exportPptx[id]}
-                      onChange={(e) =>
-                        persistReportConfig({
-                          ...reportConfig,
-                          exportPptx: { ...reportConfig.exportPptx, [id]: e.target.checked },
-                        })
-                      }
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
+      {configOpen ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm p-4 overflow-auto">
+          <div className="mx-auto max-w-[1640px]">
+            <div className="mb-4 flex justify-end">
               <button
                 type="button"
-                onClick={() => setReportConfig(resetCrcReportConfig())}
-                className="mt-4 w-full rounded-2xl border border-slate-300 dark:border-slate-600 px-4 py-2 text-xs font-semibold"
+                onClick={() => setConfigOpen(false)}
+                className="rounded-full px-4 py-2 text-xs font-semibold border border-slate-300 bg-white text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-50 shadow-sm hover:opacity-90"
               >
-                Réinitialiser la configuration cockpit
+                Fermer la configuration
               </button>
-              <p className="text-[11px] text-slate-500 mt-2">
-                La configuration est stockée sur ce navigateur (`localStorage`). Les exports reflètent
-                immédiatement ces cases cochées.
-              </p>
             </div>
+            <GlassCard
+              title="Configuration du rapport"
+              subtitle="Personnaliser titres/logo, colonnes grille, briques cockpit et sections exportées (PDF/PPTX/XLSX) — aucune ligne de code requise."
+            >
+              <div className="grid gap-6 xl:grid-cols-12">
+                <div className="space-y-4 xl:col-span-5">
+                  <div>
+                    <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Titre (exports structurés)
+                    </p>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-950/60 px-4 py-2 text-sm text-slate-900 dark:text-slate-50"
+                      value={reportConfig.reportTitle}
+                      placeholder="Laissé vide ⇒ libellés CRC automatiques."
+                      onChange={(e) => persistReportConfig({ ...reportConfig, reportTitle: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Sous-titre / mention légale
+                    </p>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-950/60 px-4 py-2 text-sm text-slate-900 dark:text-slate-50"
+                      value={reportConfig.reportSubtitle}
+                      placeholder='Exemple : "Agence XYZ — novembre 2025"'
+                      onChange={(e) => persistReportConfig({ ...reportConfig, reportSubtitle: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                      Logo export (prioritaire sur `/srm-logo.png`)
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 px-4 py-2 text-xs font-semibold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/70">
+                        Importer un logo PNG/JPEG
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          onChange={(ev) => {
+                            const file = ev.target.files?.[0];
+                            if (!file) return;
+                            const rd = new FileReader();
+                            rd.onload = () =>
+                              persistReportConfig({
+                                ...reportConfig,
+                                logoDataUrl: String(rd.result || ""),
+                              });
+                            rd.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="rounded-2xl border border-slate-300 px-4 py-2 text-xs dark:border-slate-600 disabled:opacity-40"
+                        disabled={!reportConfig.logoDataUrl}
+                        onClick={() => persistReportConfig({ ...reportConfig, logoDataUrl: null })}
+                      >
+                        Réinitialiser logo upload
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-5 xl:col-span-7">
+                  <div>
+                    <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                      Afficher sur le tableau de bord
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-1">
+                      {CRC_CHART_KEYS.map((k) => (
+                        <label
+                          key={k}
+                          className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={reportConfig.charts[k]}
+                            onChange={(e) =>
+                              persistReportConfig({
+                                ...reportConfig,
+                                charts: { ...reportConfig.charts, [k]: e.target.checked },
+                              })
+                            }
+                          />
+                          <span>{CHART_LABEL_FR[k]}</span>
+                        </label>
+                      ))}
+                      <div className="sm:col-span-2 mt-2 text-[11px] font-semibold text-slate-500 uppercase">
+                        Tableaux cockpit
+                      </div>
+                      {CRC_TABLE_KEYS.map((k) => (
+                        <label
+                          key={k}
+                          className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={reportConfig.tables[k]}
+                            onChange={(e) =>
+                              persistReportConfig({
+                                ...reportConfig,
+                                tables: { ...reportConfig.tables, [k]: e.target.checked },
+                              })
+                            }
+                          />
+                          <span>{TABLE_LABEL_FR[k]}</span>
+                        </label>
+                      ))}
+                      <div className="sm:col-span-2 mt-2 text-[11px] font-semibold text-slate-500 uppercase">
+                        Cartes KPI
+                      </div>
+                      {CRC_KPI_KEYS.map((k) => (
+                        <label
+                          key={k}
+                          className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={reportConfig.kpis[k]}
+                            onChange={(e) =>
+                              persistReportConfig({
+                                ...reportConfig,
+                                kpis: { ...reportConfig.kpis, [k]: e.target.checked },
+                              })
+                            }
+                          />
+                          <span>{KPI_LABEL_FR[k]}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-2">
+                      Colonnes visibles grille brute
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {RAW_COLUMN_KEYS.map((col) => (
+                        <label
+                          key={col}
+                          className="flex items-center gap-1 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 text-[11px]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={reportConfig.rawColumns[col]}
+                            onChange={(e) =>
+                              persistReportConfig({
+                                ...reportConfig,
+                                rawColumns: { ...reportConfig.rawColumns, [col]: e.target.checked },
+                              })
+                            }
+                          />
+                          {RAW_PREVIEW_COLUMNS.find((c) => c.key === col)?.label ?? col}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="xl:col-span-12 grid lg:grid-cols-3 gap-4 pt-4 border-t border-slate-200/70 dark:border-slate-700/70">
+                  <div>
+                    <p className="text-xs uppercase font-semibold mb-2 text-orange-700 dark:text-orange-200">
+                      Sections PDF export
+                    </p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {PDF_BLOCK_LABELS.map(({ id, label }) => (
+                        <label key={id} className="flex gap-2 text-xs items-start leading-snug">
+                          <input
+                            type="checkbox"
+                            checked={reportConfig.exportPdf[id]}
+                            onChange={(e) =>
+                              persistReportConfig({
+                                ...reportConfig,
+                                exportPdf: { ...reportConfig.exportPdf, [id]: e.target.checked },
+                              })
+                            }
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase font-semibold mb-2 text-emerald-700 dark:text-emerald-200">
+                      Feuilles Excel export
+                    </p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {EXCEL_SHEET_LABELS.map(({ id, label }) => (
+                        <label key={id} className="flex gap-2 text-xs items-start leading-snug">
+                          <input
+                            type="checkbox"
+                            checked={reportConfig.exportExcelSheets[id]}
+                            onChange={(e) =>
+                              persistReportConfig({
+                                ...reportConfig,
+                                exportExcelSheets: { ...reportConfig.exportExcelSheets, [id]: e.target.checked },
+                              })
+                            }
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs uppercase font-semibold mb-2 text-purple-700 dark:text-purple-200">
+                      Diapositives PowerPoint
+                    </p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {PPTX_BLOCK_LABELS.map(({ id, label }) => (
+                        <label key={id} className="flex gap-2 text-xs items-start leading-snug">
+                          <input
+                            type="checkbox"
+                            checked={reportConfig.exportPptx[id]}
+                            onChange={(e) =>
+                              persistReportConfig({
+                                ...reportConfig,
+                                exportPptx: { ...reportConfig.exportPptx, [id]: e.target.checked },
+                              })
+                            }
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReportConfig(resetCrcReportConfig())}
+                      className="mt-4 w-full rounded-2xl border border-slate-300 dark:border-slate-600 px-4 py-2 text-xs font-semibold"
+                    >
+                      Réinitialiser la configuration cockpit
+                    </button>
+                    <p className="text-[11px] text-slate-500 mt-2">
+                      La configuration est stockée sur ce navigateur (`localStorage`). Les exports reflètent
+                      immédiatement ces cases cochées.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
           </div>
         </div>
-      </GlassCard>
+      ) : null}
 
       <section className="glass-panel px-6 py-5 rounded-3xl border border-amber-400/35 bg-gradient-to-r from-orange-500/15 via-transparent to-transparent dark:from-orange-950/55">
         <h2 className="text-base font-semibold text-amber-950 dark:text-orange-50 mb-2">
@@ -1297,7 +1324,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
           <div className="grid xl:grid-cols-3 gap-4 items-stretch">
             {reportConfig.charts.geoBars ? (
-              <GlassCard title="Interactions par région canon" subtitle="Colonnes alignées Reporting Power BI">
+              <GlassCard title="Interactions par région canon" subtitle="Colonnes alignées rapport CRC">
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={visibleRegions.map((rg) => ({ lib: REGION_SHORT[rg], v: kpis.appelsParRégion.get(rg) ?? 0 }))}>
@@ -1316,7 +1343,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               </GlassCard>
             ) : null}
             {reportConfig.charts.geoDonut ? (
-              <GlassCard title="Donut géographique" subtitle={REGION_ORDER.map((r) => REGION_SHORT[r]).join(" • ")}>
+              <GlassCard title="Répartition géographique" subtitle={REGION_ORDER.map((r) => REGION_SHORT[r]).join(" • ")}>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -1351,7 +1378,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             ) : null}
             {reportConfig.charts.waitedResultPie ? (
               <div className="xl:col-span-3">
-                <GlassCard title="Résultats des Appels orientés vers la file d’attente." subtitle="Distribution des résultats et buckets de temps d’attente">
+                <GlassCard title="Résultats des Appels orientés vers la file d’attente." subtitle="Distribution des résultats et tranches de temps d’attente">
                   <div className="grid gap-4 xl:grid-cols-[1.45fr_minmax(280px,340px)]">
                     <div className="h-80">
                       <ResponsiveContainer width="100%" height="100%">
@@ -1368,7 +1395,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                     </div>
 
                     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
-                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Buckets de temps d’attente</div>
+                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Tranches de temps d’attente</div>
                       <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
                         {waitedTimeBuckets.map((bucket) => (
                           <div key={bucket.label} className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 border border-slate-200 dark:bg-slate-900/80 dark:border-slate-700">
@@ -1472,6 +1499,41 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             </div>
           )}
 
+          {reportConfig.charts.shiftBars ? (
+            <GlassCard title="Répartition shifts horaires" subtitle="Volumes d’appels par tranche horaire">
+              <div className="h-[340px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={shiftDistribution.data}>
+                    <CartesianGrid stroke={palette.grid} strokeDasharray="4 8" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: palette.muted, fontSize: 12 }} />
+                    <YAxis tick={{ fill: palette.muted }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: palette.tooltipBg,
+                        borderRadius: 12,
+                        border: `1px solid ${palette.grid}`,
+                      }}
+                      labelStyle={{ color: palette.fg }}
+                      formatter={(value: number, name: string) => [
+                        `${value.toLocaleString("fr-FR")} appels`,
+                        name === "count" ? "Total" : name,
+                      ]}
+                    />
+                    {shiftDistribution.resultLabels.map((result) => (
+                      <Bar
+                        key={result}
+                        dataKey={result}
+                        stackId="shift"
+                        fill={getResultColor(result)}
+                        radius={[10, 10, 0, 0]}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </GlassCard>
+          ) : null}
+
           {reportConfig.charts.trendLine ? (
             <GlassCard title="Tendance brute totale journée" subtitle="Ligne générale hors stack">
               <div className="h-64">
@@ -1498,7 +1560,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           {reportConfig.tables.pivotResult ? (
             <CrcRegionPivotWidget
               widgetId="pivotResult"
-              title="1. Pivot Résultat × Régions"
+              title="1. Résultat par région"
               subtitle="Colonnes géographiques Drâa • Laâyoune • Souss-Massa• Inconnu · familles depuis le résultat normalisé."
               labelHeader="Résultat"
               rowLabelKey="name"

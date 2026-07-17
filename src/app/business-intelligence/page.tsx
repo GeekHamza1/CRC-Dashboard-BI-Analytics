@@ -139,7 +139,7 @@ function WidgetExportBar(props: {
           try {
             await exportTablePptx(
               title,
-              subtitle || "Synthèse BI",
+              subtitle || "Synthèse de l'analyse",
               tableColumns,
               tableRows,
               `${basename}_table`,
@@ -368,14 +368,14 @@ export default function BusinessIntelligencePage() {
       <header className="flex flex-wrap items-start gap-4 justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300 font-bold">
-            BI universelle
+            Analyse universelle
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
             Intelligence décisionnelle multi-fichiers
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl mt-2 leading-relaxed">
             Import Excel / CSV entièrement côté navigateur : inférence de schéma, KPI, graphiques automatiques,
-            tableau paginé et pivots suggérés — même design que le tableau CRC.
+            tableau paginé et suggestions d'analyse — même design que le tableau CRC.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -524,7 +524,7 @@ export default function BusinessIntelligencePage() {
             <div className="space-y-10">
               {barCharts.length === 0 ? (
                 <p className="text-sm text-slate-500">
-                  Pas assez de signal catégoriel pour tracer des histogrammes automatiques — utilisez le pivot ou des
+                    Pas assez de signal catégoriel pour tracer des histogrammes automatiques — utilisez l'analyse ou des
                   colonnes avec moins de valeurs distinctes.
                 </p>
               ) : null}
@@ -606,8 +606,8 @@ export default function BusinessIntelligencePage() {
               <WidgetExportBar
                 disabled={!sortedPreviewRows.length}
                 domRef={previewRef}
-                basename="bi_preview"
-                title="Aperçu données BI"
+                basename="data_preview"
+                title="Aperçu des données"
                 subtitle={fileMeta?.name}
                 tableColumns={previewColumns}
                 tableRows={sortedPreviewRows.slice(0, 500).map((r) =>
@@ -676,7 +676,7 @@ export default function BusinessIntelligencePage() {
           </GlassCard>
 
           <GlassCard
-            title="Suggestions de pivots"
+            title="Suggestions d'analyses"
             subtitle="Cliquez pour appliquer une analyse pré-paramétrée (COUNT / SUM / AVG)."
           >
             <div className="flex flex-wrap gap-2">
@@ -700,14 +700,14 @@ export default function BusinessIntelligencePage() {
           </GlassCard>
 
           <GlassCard
-            title="Constructeur de pivot"
+            title="Créateur d'analyse"
             subtitle="Affinez dimensions, métrique et agrégation — le graphique principal se met à jour."
             action={
               <WidgetExportBar
                 disabled={!pivot.length}
                 domRef={pivotBoxRef}
                 basename="bi_pivot"
-                title="Pivot BI"
+                title="Analyse"
                 subtitle={
                   activeQuery
                     ? `${activeQuery.rows}${activeQuery.columns ? ` × ${activeQuery.columns}` : ""} · ${activeQuery.agg}`
@@ -827,7 +827,7 @@ export default function BusinessIntelligencePage() {
                   disabled={!chartData.length}
                   domRef={chartBoxRef}
                   basename="bi_chart"
-                  title="Graphique pivot BI"
+                  title="Graphique d'analyse"
                   subtitle={`Mesure : ${activeQuery?.agg ?? "count"}`}
                   tableColumns={["Libellé", "Valeur"]}
                   tableRows={chartData.slice(0, 100).map((d) => ({ Libellé: d.name, Valeur: d.value }))}

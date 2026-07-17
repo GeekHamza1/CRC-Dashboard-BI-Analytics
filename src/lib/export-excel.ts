@@ -100,7 +100,7 @@ export function exportCrcExcel(
       o.Total = visR.reduce((acc, s) => acc + numericValue(row, s), 0);
       return o;
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Pivot Résultat x Région");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Résultat par région");
   }
 
   if (sh.pivotMetier) {
@@ -110,7 +110,7 @@ export function exportCrcExcel(
       for (const s of visM) o[s] = numericValue(row, s);
       return o;
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Pivot Métier x Région");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Métier par région");
   }
 
   if (sh.pivotNature) {
@@ -120,7 +120,7 @@ export function exportCrcExcel(
       for (const s of visN) o[s] = numericValue(row, s);
       return o;
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Pivot Nature x Région");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Nature par région");
   }
 
   if (sh.operators) {
