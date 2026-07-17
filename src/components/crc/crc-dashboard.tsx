@@ -779,75 +779,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               {sourceLabel}
             </span>
           ) : null}
-          <label className="ml-auto lg:ml-0 inline-flex gap-2 text-xs items-center text-slate-600 dark:text-slate-400">
-            <input
-              type="checkbox"
-              checked={exportUsesFilters}
-              onChange={(e) => setExportUsesFilters(e.target.checked)}
-            />
-            Exports reflètent les filtres actifs
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              type="button"
-              disabled={!rows.length}
-              onClick={() =>
-                exportCrcExcel(
-                  exportDataset,
-                  sourceLabel || "crc_export",
-                  reportConfig.exportExcelSheets,
-                  exportColumnVisibility,
-                )
-              }
-              className="rounded-2xl px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-35 text-white"
-            >
-              Excel
-            </button>
-            <button
-              type="button"
-              disabled={!rows.length}
-              onClick={() => {
-                void (async () => {
-                  const widgetChartImages = await collectWidgetChartImages();
-                  await exportCrcPdf(exportDataset, exportTitlePdf, exportFileBase, {
-                    subtitle: reportConfig.reportSubtitle.trim() || undefined,
-                    logoOverride: reportConfig.logoDataUrl,
-                    pdf: reportConfig.exportPdf,
-                    columnVisibility: exportColumnVisibility,
-                    widgetChartImages,
-                  });
-                })();
-              }}
-              className="rounded-2xl px-4 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-500 disabled:opacity-35 text-white"
-            >
-              PDF
-            </button>
-            <button
-              type="button"
-              disabled={!rows.length}
-              onClick={() => {
-                void exportCrcPowerPoint(
-                  exportDataset,
-                  reportConfig.reportTitle.trim() || `CRC — Pilotage (${sourceLabel || "Axilus"})`,
-                  `CRC_ppt_${(sourceLabel || "Axilus").replace(/\W+/g, "_")}`,
-                  {
-                    subtitle: reportConfig.reportSubtitle.trim() || undefined,
-                    logoOverride: reportConfig.logoDataUrl,
-                    columnVisibility: exportColumnVisibility,
-                    dashboard: {
-                      charts: reportConfig.charts,
-                      tables: reportConfig.tables,
-                      kpis: reportConfig.kpis,
-                      rawColumns: reportConfig.rawColumns,
-                      exportPptx: reportConfig.exportPptx,
-                    },
-                  },
-                );
-              }}
-              className="rounded-2xl px-4 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-500 disabled:opacity-35 text-white"
-            >
-              PowerPoint
-            </button>
+          <div className="ml-auto lg:ml-0 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setConfigOpen(true)}
@@ -862,7 +794,22 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
       {configOpen ? (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm p-4 overflow-auto">
           <div className="mx-auto max-w-[1640px]">
-            <div className="mb-4 flex justify-end">
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-950/90 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={CRC_CHART_KEYS.every((k) => reportConfig.charts[k])}
+                  onChange={(e) =>
+                    persistReportConfig({
+                      ...reportConfig,
+                      charts: Object.fromEntries(
+                        CRC_CHART_KEYS.map((k) => [k, e.target.checked]),
+                      ) as Record<CrcChartKey, boolean>,
+                    })
+                  }
+                />
+                Tous les graphiques
+              </label>
               <button
                 type="button"
                 onClick={() => setConfigOpen(false)}
@@ -940,6 +887,21 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       Afficher sur le tableau de bord
                     </p>
                     <div className="grid sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-1">
+                      <label className="sm:col-span-2 flex items-center gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={CRC_CHART_KEYS.every((k) => reportConfig.charts[k])}
+                          onChange={(e) =>
+                            persistReportConfig({
+                              ...reportConfig,
+                              charts: Object.fromEntries(
+                                CRC_CHART_KEYS.map((k) => [k, e.target.checked]),
+                              ) as Record<CrcChartKey, boolean>,
+                            })
+                          }
+                        />
+                        <span>Tous les graphiques</span>
+                      </label>
                       {CRC_CHART_KEYS.map((k) => (
                         <label
                           key={k}
@@ -1000,6 +962,83 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                           <span>{KPI_LABEL_FR[k]}</span>
                         </label>
                       ))}
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
+                    <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-3">
+                      Exports
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3 mb-3">
+                      <label className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={exportUsesFilters}
+                          onChange={(e) => setExportUsesFilters(e.target.checked)}
+                        />
+                        Exports reflètent les filtres actifs
+                      </label>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={!rows.length}
+                        onClick={() =>
+                          exportCrcExcel(
+                            exportDataset,
+                            sourceLabel || "crc_export",
+                            reportConfig.exportExcelSheets,
+                            exportColumnVisibility,
+                          )
+                        }
+                        className="rounded-2xl px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-35 text-white"
+                      >
+                        Excel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!rows.length}
+                        onClick={() => {
+                          void (async () => {
+                            const widgetChartImages = await collectWidgetChartImages();
+                            await exportCrcPdf(exportDataset, exportTitlePdf, exportFileBase, {
+                              subtitle: reportConfig.reportSubtitle.trim() || undefined,
+                              logoOverride: reportConfig.logoDataUrl,
+                              pdf: reportConfig.exportPdf,
+                              columnVisibility: exportColumnVisibility,
+                              widgetChartImages,
+                            });
+                          })();
+                        }}
+                        className="rounded-2xl px-4 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-500 disabled:opacity-35 text-white"
+                      >
+                        PDF
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!rows.length}
+                        onClick={() => {
+                          void exportCrcPowerPoint(
+                            exportDataset,
+                            reportConfig.reportTitle.trim() || `CRC — Pilotage (${sourceLabel || "Axilus"})`,
+                            `CRC_ppt_${(sourceLabel || "Axilus").replace(/\W+/g, "_")}`,
+                            {
+                              subtitle: reportConfig.reportSubtitle.trim() || undefined,
+                              logoOverride: reportConfig.logoDataUrl,
+                              columnVisibility: exportColumnVisibility,
+                              dashboard: {
+                                charts: reportConfig.charts,
+                                tables: reportConfig.tables,
+                                kpis: reportConfig.kpis,
+                                rawColumns: reportConfig.rawColumns,
+                                exportPptx: reportConfig.exportPptx,
+                              },
+                            },
+                          );
+                        }}
+                        className="rounded-2xl px-4 py-2 text-xs font-bold bg-purple-600 hover:bg-purple-500 disabled:opacity-35 text-white"
+                      >
+                        PowerPoint
+                      </button>
                     </div>
                   </div>
                   <div>
