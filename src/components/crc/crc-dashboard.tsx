@@ -177,11 +177,12 @@ const TABLE_LABEL_FR: Record<CrcTableKey, string> = {
 
 const PDF_BLOCK_LABELS: { id: PdfBundleKey; label: string }[] = [
   { id: "kpisCards", label: "PDF — Bandeau KPI (cartes synthèse)" },
-  { id: "summaryCharts", label: "PDF — Graphes recap globaux (régions / résultat)" },
+  { id: "summaryCharts", label: "PDF — Graphes recap globaux & horaires" },
   { id: "pivotResultTable", label: "PDF — Tableau Résultat par région" },
   { id: "trendsCharts", label: "PDF — Courbes journalière & mensuelle" },
   { id: "metierNatureTables", label: "PDF — Tables Métier & Nature" },
   { id: "teleopPage", label: "PDF — Page téléopérateurs" },
+  { id: "horaires", label: "PDF — Page horaires & shifts" },
 ];
 
 const EXCEL_SHEET_LABELS: { id: ExcelSheetKey; label: string }[] = [
@@ -193,7 +194,9 @@ const EXCEL_SHEET_LABELS: { id: ExcelSheetKey; label: string }[] = [
   { id: "pivotNature", label: "Nature par région" },
   { id: "operators", label: "Classement téléopérateurs" },
   { id: "daily", label: "Évolution journalière" },
+  { id: "hourly", label: "Appels par heure" },
   { id: "monthly", label: "Évolution mensuelle" },
+  { id: "shifts", label: "Shifts horaires" },
 ];
 
 const PPTX_BLOCK_LABELS: { id: PptxSlideKey; label: string }[] = [
@@ -202,6 +205,8 @@ const PPTX_BLOCK_LABELS: { id: PptxSlideKey; label: string }[] = [
   { id: "results", label: "Diapo résultats + tendance" },
   { id: "metier", label: "Diapo métiers" },
   { id: "operators", label: "Diapo téléopérateurs" },
+  { id: "hourly", label: "Diapo heures de pointe" },
+  { id: "shifts", label: "Diapo shifts horaires" },
   { id: "definitions", label: "Diapo définitions + mensuel" },
 ];
 

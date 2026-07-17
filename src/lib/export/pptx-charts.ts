@@ -216,6 +216,49 @@ export function addTeleopVolumeBarChart(
   );
 }
 
+export function addHourlyVolumeBarChart(
+  slide: PptxGenJS.Slide,
+  labels: string[],
+  totals: number[],
+  box: { x: number; y: number; w: number; h: number },
+) {
+  slide.addChart(
+    "bar",
+    [
+      {
+        name: "Appels",
+        labels,
+        values: totals,
+      },
+    ],
+    {
+      ...box,
+      showLegend: false,
+      chartColors: [hexForPptx(AGGREGATE_VOLUME_BAR)],
+    },
+  );
+}
+
+export function addStackedShiftResultChart(
+  slide: PptxGenJS.Slide,
+  rows: { label: string; count: number; [result: string]: number | string }[],
+  resultLabels: string[],
+  box: { x: number; y: number; w: number; h: number },
+) {
+  const labels = rows.map((row) => String(row.label));
+  const series = resultLabels.map((label) => ({
+    name: label,
+    labels,
+    values: rows.map((row) => Number(row[label] ?? 0)),
+  }));
+  slide.addChart("bar", series, {
+    ...box,
+    barGrouping: "stacked",
+    showLegend: true,
+    chartColors: resultLabels.map((result) => hexForPptx(getResultColor(result))),
+  });
+}
+
 /**
  * Carte région « Résultat » — barres natives, couleurs = familles CRC (getResultColor),
  * aligné sur le dashboard (regionSlice).

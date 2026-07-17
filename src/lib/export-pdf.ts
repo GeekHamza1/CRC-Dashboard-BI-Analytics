@@ -5,11 +5,13 @@ import autoTable from "jspdf-autotable";
 import {
   dailySeries,
   globalKpis,
+  hourlyCallDistribution,
   monthlySeries,
   operatorRanking,
   pivotMétierParRégion,
   pivotNatureParRégion,
   pivotRésultatParRégion,
+  shiftResultDistribution,
 } from "./crc-analytics";
 import {
   AGGREGATE_VOLUME_BAR,
@@ -479,6 +481,46 @@ export async function exportCrcPdf(
       }
     }
     drawFooter(doc, "Classement téléopérateurs");
+  }
+
+  if (pdfCfg.horaires) {
+    const hourly = hourlyCallDistribution(rows);
+    const shiftDist = shiftResultDistribution(rows);
+    doc.addPage();
+    drawHeaderBand(
+      doc,
+      "Horaires & shifts",
+      "Répartition horaire des appels et shifts par résultat",
+      logoDataUrl,
+    );
+
+    drawBarChart(
+      doc,
+      margin,
+      36,
+      192,
+      55,
+      "Appels par heure",
+      hourly.map((row) => ({
+        label: row.hour,
+        value: row.count,
+        color: AGGREGATE_VOLUME_BAR,
+      })),
+    );
+
+    autoTable(doc, {
+      head: [["Shift", "Total", ...shiftDist.resultLabels]],
+      body: shiftDist.data.map((row) => [
+        String(row.label),
+        String(row.count),
+        ...shiftDist.resultLabels.map((label) => String(row[label] ?? 0)),
+      ]),
+      startY: 96,
+      styles: { fontSize: 7.5 },
+      headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255] },
+    });
+
+    drawFooter(doc, "Horaires et shifts");
   }
 
   const fn = `${basename.replace(/[^a-zA-Z0-9_-]+/g, "_")}.pdf`;

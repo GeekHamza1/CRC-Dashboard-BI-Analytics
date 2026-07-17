@@ -3,11 +3,13 @@ import PptxGenJS from "pptxgenjs";
 import {
   dailySeries,
   globalKpis,
+  hourlyCallDistribution,
   monthlySeries,
   operatorRanking,
   pivotMétierParRégion,
   pivotNatureParRégion,
   pivotRésultatParRégion,
+  shiftResultDistribution,
 } from "../crc-analytics";
 import { RESULT_COLORS, hexForPptx } from "../constants/chart-colors";
 import { REGION_COLORS, REGION_ORDER, REGION_SHORT } from "../crc-constants";
@@ -20,6 +22,7 @@ import { resolveReportLogo } from "../export-branding";
 import type { CrcPptxDashboardSnapshot, CrcPptxExportOptions } from "./crc-pptx-types";
 import {
   addAreaTotalsChart,
+  addHourlyVolumeBarChart,
   addLineTotalsChart,
   addMonthlyTotalsBarChart,
   addRegionBarChart,
@@ -27,6 +30,7 @@ import {
   addResultDistributionBarChart,
   addStackedMonthlyByRegionChart,
   addStackedPivotBarChart,
+  addStackedShiftResultChart,
   addStatusPieChart,
   addTeleopVolumeBarChart,
   buildRésultatPieSeries,
@@ -67,6 +71,8 @@ export async function buildAndSaveCrcPptx(
   const dly = dailySeries(rows).slice(-24);
   const mon = monthlySeries(rows).slice(-14);
   const topOps = operatorRanking(rows).slice(0, 12);
+  const hourly = hourlyCallDistribution(rows);
+  const shiftDist = shiftResultDistribution(rows);
 
   const subtitle =
     opts.subtitle?.trim() || "Statistiques des réclamations CRC — export natif PowerPoint (objets éditables)";
@@ -282,6 +288,46 @@ export async function buildAndSaveCrcPptx(
         border: { pt: 0.5, color: PPTX_CRC.cardBorder },
       });
     }
+  }
+
+  if (slideCfg.hourly && hourly.length) {
+    const hr = pptx.addSlide();
+    addSlideHeader(hr, "Heures de pointe", "Volume d'appels par heure", logoDataUrl);
+    addHourlyVolumeBarChart(
+      hr,
+      hourly.map((h) => h.hour),
+      hourly.map((h) => h.count),
+      { x: 0.45, y: 1.0, w: 12.4, h: 3.4 },
+    );
+  }
+
+  if (slideCfg.shifts && shiftDist.data.length) {
+    const sh = pptx.addSlide();
+    addSlideHeader(sh, "Shifts horaires", "Distribution par shift et par résultat", logoDataUrl);
+    addStackedShiftResultChart(sh, shiftDist.data, shiftDist.resultLabels, {
+      x: 0.45,
+      y: 1.0,
+      w: 12.4,
+      h: 3.2,
+    });
+
+    sh.addTable(
+      [
+        ["Shift", "Total", ...shiftDist.resultLabels],
+        ...shiftDist.data.map((row) => [
+          String(row.label),
+          String(row.count),
+          ...shiftDist.resultLabels.map((label) => String(row[label] ?? 0)),
+        ]),
+      ] as never,
+      {
+        x: 0.45,
+        y: 4.45,
+        w: 12.1,
+        fontSize: 8,
+        border: { pt: 0.5, color: PPTX_CRC.cardBorder },
+      },
+    );
   }
 
   if (dash.tables.rawPreview && rows.length) {

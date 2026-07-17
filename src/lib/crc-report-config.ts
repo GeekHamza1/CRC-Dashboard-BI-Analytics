@@ -51,7 +51,9 @@ export type ExcelSheetKey =
   | "pivotNature"
   | "operators"
   | "daily"
-  | "monthly";
+  | "hourly"
+  | "monthly"
+  | "shifts";
 
 export type PdfBundleKey =
   | "kpisCards"
@@ -59,7 +61,8 @@ export type PdfBundleKey =
   | "pivotResultTable"
   | "trendsCharts"
   | "metierNatureTables"
-  | "teleopPage";
+  | "teleopPage"
+  | "horaires";
 
 export type PptxSlideKey =
   | "cover"
@@ -67,6 +70,8 @@ export type PptxSlideKey =
   | "results"
   | "metier"
   | "operators"
+  | "hourly"
+  | "shifts"
   | "definitions";
 
 export interface CrcReportConfig {
@@ -160,7 +165,9 @@ function defaultReportConfig(): CrcReportConfig {
       "pivotNature",
       "operators",
       "daily",
+      "hourly",
       "monthly",
+      "shifts",
     ]),
     exportPdf: allTrueKeys([
       "kpisCards",
@@ -169,8 +176,18 @@ function defaultReportConfig(): CrcReportConfig {
       "trendsCharts",
       "metierNatureTables",
       "teleopPage",
+      "horaires",
     ]),
-    exportPptx: allTrueKeys(["cover", "kpi", "results", "metier", "operators", "definitions"]),
+    exportPptx: allTrueKeys([
+      "cover",
+      "kpi",
+      "results",
+      "metier",
+      "operators",
+      "hourly",
+      "shifts",
+      "definitions",
+    ]),
   };
 }
 

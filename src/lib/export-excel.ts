@@ -6,11 +6,14 @@ import { mergeExportExcelSheets } from "./crc-report-config";
 import {
   dailySeries,
   globalKpis,
+  hourlyCallDistribution,
   monthlySeries,
   operatorRanking,
   pivotMétierParRégion,
   pivotNatureParRégion,
   pivotRésultatParRégion,
+  rowHasQueueWait,
+  shiftResultDistribution,
 } from "./crc-analytics";
 import { RESULT_COLORS } from "./constants/chart-colors";
 import { REGION_ORDER, REGION_SHORT } from "./crc-constants";
@@ -135,6 +138,26 @@ export function exportCrcExcel(
 
   if (sh.daily) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailySeries(rows)), "Évolution journalière");
+  }
+
+  if (sh.hourly) {
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(hourlyCallDistribution(rows)),
+      "Appels par heure",
+    );
+  }
+
+  if (sh.shifts) {
+    const shiftDist = shiftResultDistribution(rows);
+    const shiftSheet = shiftDist.data.map((row) => {
+      const out: Record<string, string | number> = { Shift: row.label, Total: row.count };
+      shiftDist.resultLabels.forEach((label) => {
+        out[label] = row[label] ?? 0;
+      });
+      return out;
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(shiftSheet), "Shifts horaires");
   }
 
   if (sh.monthly) {
