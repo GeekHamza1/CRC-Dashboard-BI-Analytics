@@ -2,7 +2,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useTheme } from "next-themes";
-import Link from "next/link";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
@@ -314,8 +313,8 @@ export default function CrcDashboard() {
   const [headerDateLabel, setHeaderDateLabel] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filters, setFilters] = useState<DashboardFilters>(defaultDashboardFilters());
-  const [debugOpen, setDebugOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+  const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [exportUsesFilters, setExportUsesFilters] = useState(true);
 
   const onFile = async (files: FileList | null) => {
@@ -806,20 +805,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/business-intelligence"
-            className="rounded-full px-3 py-2 text-xs font-semibold border border-slate-300 dark:border-slate-600"
-          >
-            Analyse
-          </Link>
           <ThemeToggle />
-          <button
-            type="button"
-            onClick={() => setDebugOpen((x) => !x)}
-            className="rounded-full px-4 py-2 text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow hover:opacity-90 transition"
-          >
-            {debugOpen ? "Fermer debug" : "Mode développeur"}
-          </button>
         </div>
       </header>
 
@@ -843,7 +829,12 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             />
             Importer l&apos;export Axilus
           </label>
-          {busy ? <span className="text-sm text-slate-500 animate-pulse">Analyse workbook…</span> : null}
+          {busy ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-slate-400 border-t-slate-900 dark:border-t-slate-50 rounded-full animate-spin" />
+              <span className="text-sm text-slate-500">Analyse workbook…</span>
+            </div>
+          ) : null}
           {sourceLabel ? (
             <span className="text-xs px-4 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 font-mono text-emerald-800 dark:text-emerald-300">
               {sourceLabel}
@@ -952,88 +943,6 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                   </div>
                 </div>
                 <div className="space-y-5 xl:col-span-7">
-                  <div>
-                    <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-2">
-                      Afficher sur le tableau de bord
-                    </p>
-                    <div className="grid sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-1">
-                      <label className="sm:col-span-2 flex items-center gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={CRC_CHART_KEYS.every((k) => reportConfig.charts[k])}
-                          onChange={(e) =>
-                            persistReportConfig({
-                              ...reportConfig,
-                              charts: Object.fromEntries(
-                                CRC_CHART_KEYS.map((k) => [k, e.target.checked]),
-                              ) as Record<CrcChartKey, boolean>,
-                            })
-                          }
-                        />
-                        <span>Tous les graphiques</span>
-                      </label>
-                      {CRC_CHART_KEYS.map((k) => (
-                        <label
-                          key={k}
-                          className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={reportConfig.charts[k]}
-                            onChange={(e) =>
-                              persistReportConfig({
-                                ...reportConfig,
-                                charts: { ...reportConfig.charts, [k]: e.target.checked },
-                              })
-                            }
-                          />
-                          <span>{CHART_LABEL_FR[k]}</span>
-                        </label>
-                      ))}
-                      <div className="sm:col-span-2 mt-2 text-[11px] font-semibold text-slate-500 uppercase">
-                        Tableaux dashboard
-                      </div>
-                      {CRC_TABLE_KEYS.map((k) => (
-                        <label
-                          key={k}
-                          className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={reportConfig.tables[k]}
-                            onChange={(e) =>
-                              persistReportConfig({
-                                ...reportConfig,
-                                tables: { ...reportConfig.tables, [k]: e.target.checked },
-                              })
-                            }
-                          />
-                          <span>{TABLE_LABEL_FR[k]}</span>
-                        </label>
-                      ))}
-                      <div className="sm:col-span-2 mt-2 text-[11px] font-semibold text-slate-500 uppercase">
-                        Cartes KPI
-                      </div>
-                      {CRC_KPI_KEYS.map((k) => (
-                        <label
-                          key={k}
-                          className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={reportConfig.kpis[k]}
-                            onChange={(e) =>
-                              persistReportConfig({
-                                ...reportConfig,
-                                kpis: { ...reportConfig.kpis, [k]: e.target.checked },
-                              })
-                            }
-                          />
-                          <span>{KPI_LABEL_FR[k]}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
                   <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
                     <p className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400 mb-3">
                       Exports
@@ -1222,6 +1131,102 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
         </div>
       ) : null}
 
+      {displaySettingsOpen ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm p-4 overflow-auto">
+          <div className="mx-auto max-w-2xl">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-semibold text-slate-50">Afficher sur le tableau de bord</h2>
+              <button
+                type="button"
+                onClick={() => setDisplaySettingsOpen(false)}
+                className="rounded-full px-4 py-2 text-xs font-semibold border border-slate-300 bg-white text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-50 shadow-sm hover:opacity-90"
+              >
+                Fermer
+              </button>
+            </div>
+            <GlassCard>
+              <div className="grid gap-2 max-h-[600px] overflow-y-auto pr-1">
+                <label className="flex items-center gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-3 py-2 bg-slate-50/50 dark:bg-slate-800/30">
+                  <input
+                    type="checkbox"
+                    checked={CRC_CHART_KEYS.every((k) => reportConfig.charts[k])}
+                    onChange={(e) =>
+                      persistReportConfig({
+                        ...reportConfig,
+                        charts: Object.fromEntries(
+                          CRC_CHART_KEYS.map((k) => [k, e.target.checked]),
+                        ) as Record<CrcChartKey, boolean>,
+                      })
+                    }
+                  />
+                  <span className="font-semibold">Tous les graphiques</span>
+                </label>
+                {CRC_CHART_KEYS.map((k) => (
+                  <label
+                    key={k}
+                    className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={reportConfig.charts[k]}
+                      onChange={(e) =>
+                        persistReportConfig({
+                          ...reportConfig,
+                          charts: { ...reportConfig.charts, [k]: e.target.checked },
+                        })
+                      }
+                    />
+                    <span>{CHART_LABEL_FR[k]}</span>
+                  </label>
+                ))}
+                <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-500 uppercase">
+                  Tableaux dashboard
+                </div>
+                {CRC_TABLE_KEYS.map((k) => (
+                  <label
+                    key={k}
+                    className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={reportConfig.tables[k]}
+                      onChange={(e) =>
+                        persistReportConfig({
+                          ...reportConfig,
+                          tables: { ...reportConfig.tables, [k]: e.target.checked },
+                        })
+                      }
+                    />
+                    <span>{TABLE_LABEL_FR[k]}</span>
+                  </label>
+                ))}
+                <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-500 uppercase">
+                  Cartes KPI
+                </div>
+                {CRC_KPI_KEYS.map((k) => (
+                  <label
+                    key={k}
+                    className="flex items-start gap-2 text-xs rounded-xl border border-slate-100 dark:border-slate-700/70 px-2 py-2"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={reportConfig.kpis[k]}
+                      onChange={(e) =>
+                        persistReportConfig({
+                          ...reportConfig,
+                          kpis: { ...reportConfig.kpis, [k]: e.target.checked },
+                        })
+                      }
+                    />
+                    <span>{KPI_LABEL_FR[k]}</span>
+                  </label>
+                ))}
+              </div>
+            </GlassCard>
+          </div>
+        </div>
+      ) : null}
+
       <section className="glass-panel px-6 py-5 rounded-3xl border border-amber-400/35 bg-gradient-to-r from-orange-500/15 via-transparent to-transparent dark:from-orange-950/55">
         <h2 className="text-base font-semibold text-amber-950 dark:text-orange-50 mb-2">
           Interprétation opérationnelle des rubriques Résultat
@@ -1261,7 +1266,19 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
       {rows.length > 0 && (
         <>
-          <GlassCard title="Filtres dashboard" subtitle="Segmentation analytique uniquement ; la grille source conserve toutes ses lignes.">
+          <GlassCard
+            title="Filtres dashboard"
+            subtitle="Segmentation analytique uniquement ; la grille source conserve toutes ses lignes."
+            action={
+              <button
+                type="button"
+                onClick={() => setDisplaySettingsOpen(true)}
+                className="rounded-2xl px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white"
+              >
+                Gérer l&apos;affichage
+              </button>
+            }
+          >
             <div className="grid gap-4 lg:grid-cols-[1.05fr_minmax(0,1fr)]">
               <div className="space-y-4">
                 <label className="flex gap-2 text-sm leading-snug">
@@ -2131,75 +2148,6 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
         </div>
       ) : null}
 
-      {debugOpen && (
-        <GlassCard title="Mode développeur — Parsing Axilus">
-          {!debug ? (
-            <p className="text-sm text-slate-500">Aucun jeu chargé.</p>
-          ) : (
-            <div className="space-y-4 text-xs font-mono">
-              <div>
-                <p className="font-bold uppercase text-slate-500 mb-2">Feuilles</p>
-                <p>{debug.sheets.join(" | ")}</p>
-              </div>
-              <div>
-                <p className="font-bold uppercase text-slate-500 mb-2">En-têtes détectés</p>
-                <div className="flex flex-wrap gap-1">{debug.detectedHeaders.map((h) => (
-                  <span key={h} className="px-2 py-0.5 rounded bg-sky-500/15 text-[10px] border border-sky-600/40">
-                    {h}
-                  </span>
-                ))}</div>
-              </div>
-              <div>
-                <p className="font-bold uppercase text-slate-500 mb-2">Mappings normalisés</p>
-                <pre className="max-h-40 overflow-auto p-4 rounded-2xl bg-slate-950 text-green-400 text-[11px]">
-                  {debug.normalizedHeaders
-                    .map((m) => `"${m.original}" → [${String(m.normalizedKey)}] label UI: "${displayLabel(m.original)}"`)
-                    .join("\n")}
-                </pre>
-              </div>
-              <div>
-                <p className="font-bold uppercase text-slate-500 mb-2">Échantillon JSON (lignes 1-5)</p>
-                <pre className="max-h-64 overflow-auto p-4 rounded-2xl bg-slate-900 text-yellow-400 text-[10px]">
-                  {JSON.stringify(
-                    rows.slice(0, 5).map((r) => ({
-                      rawIndex: r.rawIndex,
-                      valid: r.valid,
-                      motif: r.validationReason ?? null,
-                      date: r.date ? r.date.toISOString() : null,
-                      résultat: r.résultat,
-                      résultatRaw: r.résultatRaw,
-                      régionCanon: r.régionCanon,
-                      téléopérateur: r.téléopérateur,
-                    })),
-                    null,
-                    2,
-                  )}
-                </pre>
-              </div>
-
-              <div className="grid sm:grid-cols-4 gap-2">
-                {[
-                  ["Brutes parsées", debug.parsedRows],
-                  ["Valides métier/date", debug.validRows],
-                  ["À contrôler", debug.invalidRows],
-                  ["Somme contrôle", `${debug.validRows + debug.invalidRows}`],
-                ].map(([label, count]) => (
-                  <div key={String(label)} className="p-4 rounded-xl border border-white/60 dark:border-white/10 bg-white/40 dark:bg-slate-900/55">
-                    <p className="text-[11px] text-slate-500 uppercase">{label}</p>
-                    <p className="text-xl font-semibold">{String(count)}</p>
-                  </div>
-                ))}
-              </div>
-              <div>
-                <p className="font-bold uppercase text-slate-500 mb-2">Parsing logs</p>
-                <pre className="max-h-60 overflow-auto p-4 rounded-2xl bg-slate-50 dark:bg-black/55 text-emerald-800 dark:text-emerald-400">
-                  {debug.logs.join("\n")}
-                </pre>
-              </div>
-            </div>
-          )}
-        </GlassCard>
-      )}
     </div>
   );
 }
