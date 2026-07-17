@@ -304,6 +304,7 @@ export default function CrcDashboard() {
   const [rows, setRows] = useState<CrcRow[]>([]);
   const [debug, setDebug] = useState<ParseDebug | null>(null);
   const [sourceLabel, setSourceLabel] = useState("");
+  const [headerDateLabel, setHeaderDateLabel] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filters, setFilters] = useState<DashboardFilters>(defaultDashboardFilters());
   const [debugOpen, setDebugOpen] = useState(false);
@@ -317,6 +318,7 @@ export default function CrcDashboard() {
       const parsed = await parseImportedFile(files[0]);
       setRows(parsed.rows);
       setDebug(parsed.debug);
+      setHeaderDateLabel(parsed.headerDateLabel ?? null);
       setSourceLabel(files[0].name);
       const ops = [...new Set(parsed.rows.map((r) => r.téléopérateur))].sort((a, b) =>
         a.localeCompare(b, "fr"),
@@ -360,6 +362,28 @@ export default function CrcDashboard() {
 
   const filteredRows = useMemo(() => applyFilters(rows, effectiveFilters), [rows, effectiveFilters]);
   const shiftDistribution = useMemo(() => shiftResultDistribution(filteredRows), [filteredRows]);
+  const shiftWaitBuckets = useMemo(
+    () => {
+      const buckets = [
+        { label: "00h–08h", min: 0, max: 7, count: 0 },
+        { label: "08h–16h", min: 8, max: 15, count: 0 },
+        { label: "16h–00h", min: 16, max: 23, count: 0 },
+      ];
+
+      for (const row of filteredRows) {
+        if (!row.date) continue;
+        const hour = row.date.getHours();
+        const bucket = buckets.find((b) => hour >= b.min && hour <= b.max);
+        if (!bucket) continue;
+        if (rowHasQueueWait(row)) {
+          bucket.count += 1;
+        }
+      }
+
+      return buckets;
+    },
+    [filteredRows],
+  );
   const [metierResultatFilter, setMetierResultatFilter] = useState("all");
 
   const visibleRegions = useMemo(
@@ -544,7 +568,7 @@ const chartTooltip = (
       };
 
       return [
-        `${Number(value)?.toLocaleString("fr-FR") ?? 0} lignes`,
+        `${Number(value)?.toLocaleString("fr-FR") ?? 0} Appels`,
         labels[name] || name,
       ];
     }}
@@ -642,7 +666,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
       {
         key: "totalVolume",
         title: KPI_LABEL_FR.totalVolume,
-        subtitle: "Lignes présentes après filtres cockpit.",
+        subtitle: "Lignes présentes après filtres dashboard.",
         body: kpis.totalAppels,
       },
       {
@@ -672,7 +696,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
       {
         key: "teleopsDistinct",
         title: KPI_LABEL_FR.teleopsDistinct,
-        subtitle: "Identifiants distincts post filtres cockpit.",
+        subtitle: "Identifiants distincts post filtres dashboard.",
         body: new Set(filteredRows.map((r) => r.téléopérateur)).size,
       },
       {
@@ -726,10 +750,15 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           <p className="text-[11px] uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300 font-bold">
             Axilus CRC Operational
           </p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+          {headerDateLabel ? (
+            <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">
+              Période : {headerDateLabel}
+            </p>
+          ) : null}
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mt-3">
             Tableau de bord CRC & relations clients
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl mt-2 leading-relaxed">
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl mt-4 leading-relaxed">
             Données issues des exports bureau Axilus : traitements, contacts répétés et réclamations
             multiplex conservés intégralement (pas de suppression de lignes ou d&apos;
             identifiants fictifs obsolètes).
@@ -820,7 +849,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             </div>
             <GlassCard
               title="Configuration du rapport"
-              subtitle="Personnaliser titres/logo, colonnes grille, briques cockpit et sections exportées (PDF/PPTX/XLSX) — aucune ligne de code requise."
+              subtitle="Personnaliser titres/logo, colonnes grille, briques dashboard et sections exportées (PDF/PPTX/XLSX) — aucune ligne de code requise."
             >
               <div className="grid gap-6 xl:grid-cols-12">
                 <div className="space-y-4 xl:col-span-5">
@@ -921,7 +950,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                         </label>
                       ))}
                       <div className="sm:col-span-2 mt-2 text-[11px] font-semibold text-slate-500 uppercase">
-                        Tableaux cockpit
+                        Tableaux dashboard
                       </div>
                       {CRC_TABLE_KEYS.map((k) => (
                         <label
@@ -1138,7 +1167,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       onClick={() => setReportConfig(resetCrcReportConfig())}
                       className="mt-4 w-full rounded-2xl border border-slate-300 dark:border-slate-600 px-4 py-2 text-xs font-semibold"
                     >
-                      Réinitialiser la configuration cockpit
+                      Réinitialiser la configuration dashboard
                     </button>
                     <p className="text-[11px] text-slate-500 mt-2">
                       La configuration est stockée sur ce navigateur (`localStorage`). Les exports reflètent
@@ -1184,14 +1213,14 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               Campagne/Nom • Date • Page3/Nature • Téléopérateur • Résultat • Page3/Regions •
               Page3/Metier
             </code>
-            . Labels normalisés (sans préfixes Header/ ou Page3/) pour l&apos;ensemble du cockpit.
+            . Labels normalisés (sans préfixes Header/ ou Page3/) pour l&apos;ensemble du dashboard.
           </p>
         </GlassCard>
       )}
 
       {rows.length > 0 && (
         <>
-          <GlassCard title="Filtres cockpit" subtitle="Segmentation analytique uniquement ; la grille source conserve toutes ses lignes.">
+          <GlassCard title="Filtres dashboard" subtitle="Segmentation analytique uniquement ; la grille source conserve toutes ses lignes.">
             <div className="grid gap-4 lg:grid-cols-[1.05fr_minmax(0,1fr)]">
               <div className="space-y-4">
                 <label className="flex gap-2 text-sm leading-snug">
@@ -1316,54 +1345,67 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           </GlassCard>
 
           {kpiTiles.length ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {kpiTiles.map((tile) => {
-                const clickable = ["abandons", "decrochesInterrompus", "informes", "tickets"].includes(tile.key);
-                const isAbandonAlert = tile.key === "abandons" && typeof tile.body === "number" && tile.body > 1;
-                return (
-                  <GlassCard
-                    key={tile.key}
-                    title={tile.title}
-                    subtitle={tile.subtitle}
-                    className={
-                      isAbandonAlert
-                        ? "border border-red-300/80 bg-red-50/90 shadow-red-100 dark:border-red-700/60 dark:bg-red-950/25 dark:shadow-red-950/20"
-                        : undefined
-                    }
-                    action={
-                      clickable ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDetailKpi(
-                              tile.key === "abandons"
-                                ? "abandons"
-                                : tile.key === "decrochesInterrompus"
+            <div>
+              {headerDateLabel ? (
+                <p className="text-3xl sm:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight mb-4">
+                  Période : {headerDateLabel}
+                </p>
+              ) : null}
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {kpiTiles.map((tile) => {
+                  const clickable = ["abandons", "decrochesInterrompus", "informes", "tickets"].includes(tile.key);
+                  const isAbandonAlert = tile.key === "abandons" && typeof tile.body === "number" && tile.body > 1;
+                  return (
+                    <GlassCard
+                      key={tile.key}
+                      title={tile.title}
+                      subtitle={tile.subtitle}
+                      className={
+                        isAbandonAlert
+                          ? "border border-red-300/80 bg-red-50/90 shadow-red-100 dark:border-red-700/60 dark:bg-red-950/25 dark:shadow-red-950/20"
+                          : undefined
+                      }
+                      action={
+                        clickable ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDetailKpi(
+                                tile.key === "abandons"
+                                  ? "abandons"
+                                  : tile.key === "decrochesInterrompus"
                                   ? "decroches"
                                   : tile.key === "informes"
-                                    ? "informes"
-                                    : "tickets",
-                            )
-                          }
-                          className="rounded-full px-3 py-1 text-[11px] font-semibold border border-slate-300 dark:border-slate-600"
-                        >
-                          Détails
-                        </button>
-                      ) : null
-                    }
-                  >
-                    <div className={`text-4xl font-bold tabular-nums mt-2 ${isAbandonAlert ? "text-red-600 dark:text-red-300" : "text-indigo-600 dark:text-indigo-300"}`}>
-                      {tile.body}
-                    </div>
-                  </GlassCard>
-                );
-              })}
+                                  ? "informes"
+                                  : "tickets",
+                              )
+                            }
+                            className="rounded-full px-3 py-1 text-[11px] font-semibold border border-slate-300 dark:border-slate-600"
+                          >
+                            Détails
+                          </button>
+                        ) : null
+                      }
+                    >
+                      <div
+                        className={`text-4xl font-bold tabular-nums mt-2 ${
+                          isAbandonAlert
+                            ? "text-red-600 dark:text-red-300"
+                            : "text-indigo-600 dark:text-indigo-300"
+                        }`}
+                      >
+                        {tile.body}
+                      </div>
+                    </GlassCard>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
 
           <div className="grid xl:grid-cols-3 gap-4 items-stretch">
             {reportConfig.charts.geoBars ? (
-              <GlassCard title="Interactions par région canon" subtitle="Colonnes alignées rapport CRC">
+              <GlassCard title="Appels par région" subtitle="Colonnes alignées rapport CRC">
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={visibleRegions.map((rg) => ({ lib: REGION_SHORT[rg], v: kpis.appelsParRégion.get(rg) ?? 0 }))}>
@@ -1399,7 +1441,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               </GlassCard>
             ) : null}
             {reportConfig.charts.statusPie ? (
-              <GlassCard title="Répartition KPI statuts critiques" subtitle="Couleurs Résultat figées sur tout le cockpit">
+              <GlassCard title="Répartition KPI statuts critiques" subtitle="Couleurs Résultat figées sur tout le dashboard">
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -1540,35 +1582,85 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
           {reportConfig.charts.shiftBars ? (
             <GlassCard title="Répartition shifts horaires" subtitle="Volumes d’appels par tranche horaire">
-              <div className="h-[340px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={shiftDistribution.data}>
-                    <CartesianGrid stroke={palette.grid} strokeDasharray="4 8" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fill: palette.muted, fontSize: 12 }} />
-                    <YAxis tick={{ fill: palette.muted }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: palette.tooltipBg,
-                        borderRadius: 12,
-                        border: `1px solid ${palette.grid}`,
-                      }}
-                      labelStyle={{ color: palette.fg }}
-                      formatter={(value: number, name: string) => [
-                        `${value.toLocaleString("fr-FR")} appels`,
-                        name === "count" ? "Total" : name,
-                      ]}
-                    />
-                    {shiftDistribution.resultLabels.map((result) => (
-                      <Bar
-                        key={result}
-                        dataKey={result}
-                        stackId="shift"
-                        fill={getResultColor(result)}
-                        radius={[10, 10, 0, 0]}
+              <div className="space-y-4">
+                <div className="h-[340px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={shiftDistribution.data}>
+                      <CartesianGrid stroke={palette.grid} strokeDasharray="4 8" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fill: palette.muted, fontSize: 12 }} />
+                      <YAxis tick={{ fill: palette.muted }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: palette.tooltipBg,
+                          borderRadius: 12,
+                          border: `1px solid ${palette.grid}`,
+                        }}
+                        labelStyle={{ color: palette.fg }}
+                        formatter={(value: number, name: string) => [
+                          `${value.toLocaleString("fr-FR")} appels`,
+                          name === "count" ? "Total" : name,
+                        ]}
                       />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
+                      {shiftDistribution.resultLabels.map((result) => (
+                        <Bar
+                          key={result}
+                          dataKey={result}
+                          stackId="shift"
+                          fill={getResultColor(result)}
+                          radius={[10, 10, 0, 0]}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="flex justify-center rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950/90">
+                  <div className="w-full max-w-[820px]">
+                    <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100 text-center">
+                      Détail par tranche horaire
+                    </div>
+                    <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/95">
+                      <table className="min-w-[680px] w-full text-left text-[12px] leading-tight text-slate-700 dark:text-slate-300">
+                        <thead className="bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+                          <tr>
+                            <th className="px-3 py-3 font-semibold text-left">Shift</th>
+                            {shiftDistribution.resultLabels.map((result) => (
+                              <th key={result} className="px-3 py-3 font-semibold text-right">
+                                {result}
+                              </th>
+                            ))}
+                            <th className="px-3 py-3 font-semibold text-right">Total</th>
+                            <th className="px-3 py-3 font-semibold text-right">Attendus</th>
+                            <th className="px-3 py-3 font-semibold text-right">% attendus</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {shiftDistribution.data.map((bucket, index) => {
+                            const waitBucket = shiftWaitBuckets.find((w) => w.label === bucket.label);
+                            const waited = waitBucket?.count ?? 0;
+                            const pctWaited = bucket.count > 0 ? `${((waited / bucket.count) * 100).toFixed(1)} %` : "0.0 %";
+                            return (
+                              <tr
+                                key={bucket.label}
+                                className={`${index % 2 === 0 ? "bg-white dark:bg-slate-950" : "bg-slate-50 dark:bg-slate-900"} border-t border-slate-200 dark:border-slate-800`}
+                              >
+                                <td className="px-3 py-3 font-medium text-slate-900 dark:text-slate-100">{bucket.label}</td>
+                                {shiftDistribution.resultLabels.map((result) => (
+                                  <td key={result} className="px-3 py-3 text-right">
+                                    {(bucket[result] as number) ?? 0}
+                                  </td>
+                                ))}
+                                <td className="px-3 py-3 text-right font-semibold">{bucket.count}</td>
+                                <td className="px-3 py-3 text-right font-semibold">{waited}</td>
+                                <td className="px-3 py-3 text-right">{pctWaited}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
               </div>
             </GlassCard>
           ) : null}

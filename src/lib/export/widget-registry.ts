@@ -10,7 +10,7 @@ import { REGION_ORDER, REGION_SHORT } from "../crc-constants";
 import type { CrcPptxDashboardSnapshot } from "./crc-pptx-types";
 import type { CrcRow } from "../crc-types";
 
-/** Région — histogramme résultats (carte cockpit). */
+/** Région — histogramme résultats (carte dashboard). */
 export interface CrcRegionCardWidgetSpec {
   widgetId: string;
   widgetTitle: string;

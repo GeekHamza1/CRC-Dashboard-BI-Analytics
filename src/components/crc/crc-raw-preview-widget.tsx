@@ -314,7 +314,7 @@ export function CrcRawPreviewWidget(props: {
   return (
     <GlassShell
       title="Grille brute (extrait contrôlé)"
-      subtitle="Prévisualisation jusqu'à 200 lignes — colonnes et exports alignés sur l'état cockpit."
+      subtitle="Prévisualisation jusqu'à 200 lignes — colonnes et exports alignés sur l'état dashboard."
       toolbar={toolbar}
     >
       {chartPanel}

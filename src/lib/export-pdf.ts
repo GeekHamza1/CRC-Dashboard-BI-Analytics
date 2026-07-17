@@ -181,7 +181,7 @@ export async function exportCrcPdf(
     subtitle?: string;
     logoOverride?: string | null;
     pdf?: Partial<CrcReportConfig["exportPdf"]>;
-    /** Colonnes visibles cockpit — même état que le tableau de bord */
+    /** Colonnes visibles dashboard — même état que le tableau de bord */
     columnVisibility?: CrcExportColumnVisibility;
     /** Captures PNG (data URL) des graphiques associés aux widgets */
     widgetChartImages?: Partial<Record<"pivotResult" | "pivotMetier" | "pivotNature" | "teleOp", string>>;

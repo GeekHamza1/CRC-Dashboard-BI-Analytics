@@ -1,7 +1,7 @@
 import type { CrcExportColumnVisibility } from "../crc-export-helpers";
 import type { CrcChartKey, CrcKpiKey, CrcReportConfig, CrcTableKey, RawColumnKey } from "../crc-report-config";
 
-/** Live cockpit snapshot — same toggles as the dashboard. */
+/** Live dashboard snapshot — same toggles as the dashboard. */
 export type CrcPptxDashboardSnapshot = Pick<
   CrcReportConfig,
   "charts" | "tables" | "kpis" | "rawColumns" | "exportPptx"

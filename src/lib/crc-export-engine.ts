@@ -281,7 +281,7 @@ export async function exportTeleOpPptx(ops: OperatorRankRow[], metricKeys: strin
   await pptx.writeFile({ fileName: `${sanitizeBase(basename)}.pptx` });
 }
 
-/** Aperçu brut cockpit : colonnes visibles uniquement, même ordre que `keys`. */
+/** Aperçu brut dashboard : colonnes visibles uniquement, même ordre que `keys`. */
 export function exportRawPreviewExcel(rows: CrcRow[], keys: RawColumnKey[], headers: string[], basename: string) {
   const wb = XLSX.utils.book_new();
   const aoa: (string | number)[][] = [headers, ...rows.map((r) => keys.map((k) => formatRawCellForExport(r, k)))];

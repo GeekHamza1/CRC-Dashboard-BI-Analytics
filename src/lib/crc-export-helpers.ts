@@ -105,7 +105,7 @@ export function filterOperatorRow(
   return out;
 }
 
-/** Valeurs texte pour exports tableaux (Excel / PDF / PPTX) — aligné sur la grille cockpit. */
+/** Valeurs texte pour exports tableaux (Excel / PDF / PPTX) — aligné sur la grille dashboard. */
 export function formatRawCellForExport(r: CrcRow, key: RawColumnKey): string {
   switch (key) {
     case "date":

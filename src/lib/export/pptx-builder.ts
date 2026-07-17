@@ -168,7 +168,7 @@ export async function buildAndSaveCrcPptx(
     addSlideHeader(
       res,
       "Résultat & dynamiques",
-      "Graphiques natifs + tableau de résultats (colonnes visibles cockpit)",
+      "Graphiques natifs + tableau de résultats (colonnes visibles dashboard)",
       logoDataUrl,
     );
 
@@ -288,7 +288,7 @@ export async function buildAndSaveCrcPptx(
     const keys = RAW_COLUMN_KEYS.filter((col) => dash.rawColumns[col]);
     if (keys.length) {
       const raw = pptx.addSlide();
-      addSlideHeader(raw, "Grille brute (extrait)", "Colonnes visibles cockpit — texte éditable", logoDataUrl);
+      addSlideHeader(raw, "Grille brute (extrait)", "Colonnes visibles dashboard — texte éditable", logoDataUrl);
       const headers = keys.map((k) => {
         const labels: Record<string, string> = {
           date: "Date",

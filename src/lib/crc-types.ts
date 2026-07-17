@@ -51,7 +51,7 @@ export interface CrcRow {
 export interface HeaderMappingEntry {
   original: string;
   normalizedKey: string;
-  /** Label shown in cockpit (colonnes lisibles Axilus) */
+  /** Label shown in dashboard (colonnes lisibles Axilus) */
   displayLabel: string;
 }
 
@@ -69,4 +69,5 @@ export interface ParseDebug {
 export interface ParseResult {
   rows: CrcRow[];
   debug: ParseDebug;
+  headerDateLabel?: string;
 }

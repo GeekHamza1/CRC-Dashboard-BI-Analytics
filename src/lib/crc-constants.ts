@@ -18,8 +18,8 @@ export const REGION_COLORS: Record<CanonicalRegion, string> = {
 
 /** Short labels for compact chart axes */
 export const REGION_SHORT: Record<CanonicalRegion, string> = {
-  "Drâa-Tafilalet": "Drâa",
-  "Laâyoune-Sakia El Hamra": "Laâyoune",
+  "Drâa-Tafilalet": "Drâa-Tafilalet",
+  "Laâyoune-Sakia El Hamra": "Laâyoune-Sakia El Hamra",
   "Souss-Massa": "Souss Massa",
   "Inconnu": "Inconnu",
 };

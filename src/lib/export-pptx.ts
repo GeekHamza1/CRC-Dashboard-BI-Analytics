@@ -18,7 +18,7 @@ export async function exportCrcPowerPoint(
   opts?: CrcPptxExportOptions,
 ) {
   if (!opts?.dashboard) {
-    throw new Error("exportCrcPowerPoint: `dashboard` snapshot is required (cockpit visibility).");
+    throw new Error("exportCrcPowerPoint: `dashboard` snapshot is required (dashboard visibility).");
   }
   await buildAndSaveCrcPptx(rows, title, basename, opts);
 }

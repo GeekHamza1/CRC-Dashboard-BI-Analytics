@@ -8,7 +8,7 @@ const CrcDashboard = dynamic(
     ssr: false,
     loading: () => (
       <div className="min-h-[60vh] flex items-center justify-center text-sm text-slate-500 animate-pulse">
-        Chargement du cockpit CRC…
+        Chargement du dashboard CRC…
       </div>
     ),
   }

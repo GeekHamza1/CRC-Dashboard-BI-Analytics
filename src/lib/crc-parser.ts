@@ -278,6 +278,33 @@ function stringifyCell(cell: RawCell): string {
   return String(cell).trim();
 }
 
+function parseHeaderDateLabel(cell: RawCell): string | null {
+  const raw = stringifyCell(cell);
+  if (!raw) return null;
+
+  const normalized = raw.replace(/\u00a0/g, " ");
+  const match = normalized.match(
+    /Date\s*['"]?\s*(?:de\s*)?(\d{1,2}\.\d{1,2}\.\d{4})(?:\s+\d{1,2}:\d{2})?\s*(?:à|-)\s*(\d{1,2}\.\d{1,2}\.\d{4})(?:\s+\d{1,2}:\d{2})?/i,
+  );
+  if (match) {
+    const from = match[1];
+    const to = match[2];
+    return from === to ? from : `${from} — ${to}`;
+  }
+
+  const single = normalized.match(
+    /Date\s*['"]?\s*(?:de\s*)?(\d{1,2}\.\d{1,2}\.\d{4})(?:\s+\d{1,2}:\d{2})?/i,
+  );
+  if (single) return single[1];
+
+  const dates = normalized.match(/\d{1,2}\.\d{1,2}\.\d{4}/g);
+  if (!dates?.length) return null;
+  if (dates.length === 1) return dates[0];
+  return dates[0] === dates[dates.length - 1]
+    ? dates[0]
+    : `${dates[0]} — ${dates[dates.length - 1]}`;
+}
+
 function omitCellA1(ws: XLSX.WorkSheet): XLSX.WorkSheet {
   const clone = { ...ws } as XLSX.WorkSheet;
   delete (clone as Record<string, unknown>).A1;
@@ -306,7 +333,9 @@ export function parseWorkbook(wb: XLSX.WorkBook, fileHintName = ""): ParseResult
   const sheets = wb.SheetNames;
   logs.push(`Fichier: ${fileHintName || "(buffer)"}`);
   logs.push(`Feuilles: ${sheets.join(", ")}`);
-  const first = omitCellA1(wb.Sheets[sheets[0]]);
+  const sheet = wb.Sheets[sheets[0]];
+  const headerDateLabel = parseHeaderDateLabel((sheet?.A1 as { v?: RawCell })?.v ?? null) ?? undefined;
+  const first = omitCellA1(sheet);
   const json = XLSX.utils.sheet_to_json<unknown[]>(first, {
     header: 1,
     blankrows: false,
@@ -464,7 +493,7 @@ rawDateText: stringifyCell(rawDateCell ?? ""),
     logs,
   };
 
-  return { rows, debug };
+  return { rows, debug, headerDateLabel };
 }
 
 /** Parse XLSX / XLS binary */
