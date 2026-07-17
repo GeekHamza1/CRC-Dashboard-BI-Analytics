@@ -27,6 +27,7 @@ import {
   dailySeries,
   defaultDashboardFilters,
   globalKpis,
+  hourlyCallDistribution,
   isEmptyField,
   monthlySeries,
   operatorRanking,
@@ -160,6 +161,7 @@ const CHART_LABEL_FR: Record<CrcChartKey, string> = {
   dailyArea: "Courbes cumulées par jour",
   monthlyBars: "Barres empilées par mois",
   shiftBars: "Répartition shifts horaires",
+  peakHours: "Heures de pointe d'appels",
   trendLine: "Tendance totale jour",
   teleopBars: "Classement téléopérateurs (diagramme)",
   regionCards: "Cartes région Drâa / Laâyoune / Souss-Massa/ Inconnu",
@@ -204,7 +206,7 @@ const PPTX_BLOCK_LABELS: { id: PptxSlideKey; label: string }[] = [
 ];
 
 const KPI_LABEL_FR: Record<CrcKpiKey, string> = {
-  totalVolume: "Total interactions",
+  totalVolume: "Total Appels",
   abandons: "Appels abandonnés",
   decrochesInterrompus: "Appels décrochés interrompus",
   informes: "Clients informés",
@@ -362,6 +364,7 @@ export default function CrcDashboard() {
 
   const filteredRows = useMemo(() => applyFilters(rows, effectiveFilters), [rows, effectiveFilters]);
   const shiftDistribution = useMemo(() => shiftResultDistribution(filteredRows), [filteredRows]);
+  const hourlyCallSeries = useMemo(() => hourlyCallDistribution(filteredRows), [filteredRows]);
   const shiftWaitBuckets = useMemo(
     () => {
       const buckets = [
@@ -662,85 +665,123 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
   const kpiTiles = useMemo(() => {
     type Item = { key: CrcKpiKey; title: string; subtitle: string; body: ReactNode };
-    const tiles: Item[] = [
-      {
-        key: "totalVolume",
-        title: KPI_LABEL_FR.totalVolume,
-        subtitle: "Lignes présentes après filtres dashboard.",
-        body: kpis.totalAppels,
-      },
-      {
-        key: "abandons",
-        title: KPI_LABEL_FR.abandons,
-        subtitle: "Lignes dont le résultat normalisé est « Appels abandonnés ».",
-        body: kpis.appelsAbandonnés,
-      },
-      {
-        key: "decrochesInterrompus",
-        title: KPI_LABEL_FR.decrochesInterrompus,
-        subtitle: "Lignes dont le résultat normalisé est « Appels décrochés interrompus ».",
-        body: kpis.appelsDécrochésInterrompus,
-      },
-      {
-        key: "informes",
-        title: KPI_LABEL_FR.informes,
-        subtitle: "Lignes dont le résultat normalisé est « Clients informés ».",
-        body: kpis.clientsInformés,
-      },
-      {
-        key: "tickets",
-        title: KPI_LABEL_FR.tickets,
-        subtitle: "Lignes dont le résultat normalisé est « Tickets transmis ».",
-        body: kpis.ticketsTransmis,
-      },
-      {
-        key: "teleopsDistinct",
-        title: KPI_LABEL_FR.teleopsDistinct,
-        subtitle: "Identifiants distincts post filtres dashboard.",
-        body: new Set(filteredRows.map((r) => r.téléopérateur)).size,
-      },
-      {
-        key: "avgWaitingTime",
-        title: KPI_LABEL_FR.avgWaitingTime,
-        subtitle: "Moyenne calculée sur les temps d'attente renseignés.",
-        body: kpis.avgWaitingTime,
-      },
-      {
-        key: "clientsWaited",
-        title: KPI_LABEL_FR.clientsWaited,
-        subtitle: "Nombre de clients avec un temps d'attente renseigné.",
-        body: kpis.totalClientsWaited,
-      },
-      {
-        key: "pctClientsWaited",
-        title: KPI_LABEL_FR.pctClientsWaited,
-        subtitle: "Part des clients avec un temps d'attente renseigné.",
-        body: `${kpis.pctClientsWaited.toFixed(1)} %`,
-      },
-      {
-        key: "pctInformes",
-        title: KPI_LABEL_FR.pctInformes,
-        subtitle: "clients informés / volume filtré",
-        body: filteredRows.length
-          ? `${((kpis.clientsInformés / filteredRows.length) * 100).toFixed(1)} %`
-          : "—",
-      },
-      {
-        key: "pctTickets",
-        title: KPI_LABEL_FR.pctTickets,
-        subtitle: "tickets transmis / volume filtré",
-        body: filteredRows.length
-          ? `${((kpis.ticketsTransmis / filteredRows.length) * 100).toFixed(1)} %`
-          : "—",
-      },
-      {
-        key: "coverage",
-        title: KPI_LABEL_FR.coverage,
-        subtitle: "préservation intégrale base source",
-        body: `${filteredRows.length} / ${rows.length}`,
-      },
-    ];
-    return tiles.filter((t) => reportConfig.kpis[t.key]);
+    const tiles: Item[] = [];
+
+    const addTile = (tile: Item) => {
+      tiles.push(tile);
+    };
+
+    const addPairedTile = (
+      countKey: CrcKpiKey,
+      pctKey: CrcKpiKey,
+      title: string,
+      subtitle: string,
+      countValue: ReactNode,
+      pctValue: string,
+      pctLabel: string,
+    ) => {
+      const countEnabled = reportConfig.kpis[countKey];
+      const pctEnabled = reportConfig.kpis[pctKey];
+      if (!countEnabled && !pctEnabled) return;
+
+      if (countEnabled && pctEnabled) {
+        addTile({
+          key: countKey,
+          title,
+          subtitle,
+          body: (
+            <div className="space-y-2">
+              <div className="text-4xl font-bold tabular-nums">{countValue}</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">{pctValue}</div>
+            </div>
+          ),
+        });
+      } else if (countEnabled) {
+        addTile({
+          key: countKey,
+          title,
+          subtitle,
+          body: countValue,
+        });
+      } else {
+        addTile({
+          key: pctKey,
+          title: pctLabel,
+          subtitle,
+          body: pctValue,
+        });
+      }
+    };
+
+    addTile({
+      key: "totalVolume",
+      title: KPI_LABEL_FR.totalVolume,
+      subtitle: "Lignes présentes après filtres dashboard.",
+      body: kpis.totalAppels,
+    });
+    addTile({
+      key: "abandons",
+      title: KPI_LABEL_FR.abandons,
+      subtitle: "Nombre total des appels abandonnés.",
+      body: kpis.appelsAbandonnés,
+    });
+    addTile({
+      key: "decrochesInterrompus",
+      title: KPI_LABEL_FR.decrochesInterrompus,
+      subtitle: "Nombre d'appels décrochés puis interrompus.",
+      body: kpis.appelsDécrochésInterrompus,
+    });
+    addPairedTile(
+      "informes",
+      "pctInformes",
+      KPI_LABEL_FR.informes,
+      "Nombre de clients informés.",
+      kpis.clientsInformés,
+      filteredRows.length
+        ? `${((kpis.clientsInformés / filteredRows.length) * 100).toFixed(1)} %`
+        : "—",
+      KPI_LABEL_FR.pctInformes,
+    );
+    addPairedTile(
+      "tickets",
+      "pctTickets",
+      KPI_LABEL_FR.tickets,
+      "Nombre de tickets transmis.",
+      kpis.ticketsTransmis,
+      filteredRows.length
+        ? `${((kpis.ticketsTransmis / filteredRows.length) * 100).toFixed(1)} %`
+        : "—",
+      KPI_LABEL_FR.pctTickets,
+    );
+    addTile({
+      key: "teleopsDistinct",
+      title: KPI_LABEL_FR.teleopsDistinct,
+      subtitle: "Total des Téléopérateurs actifs.",
+      body: new Set(filteredRows.map((r) => r.téléopérateur)).size,
+    });
+    addTile({
+      key: "avgWaitingTime",
+      title: KPI_LABEL_FR.avgWaitingTime,
+      subtitle: "Moyenne calculée sur les temps d'attente renseignés.",
+      body: kpis.avgWaitingTime,
+    });
+    addPairedTile(
+      "clientsWaited",
+      "pctClientsWaited",
+      KPI_LABEL_FR.clientsWaited,
+      "Nombre de clients avec un temps d'attente renseigné.",
+      kpis.totalClientsWaited,
+      `${kpis.pctClientsWaited.toFixed(1)} %`,
+      KPI_LABEL_FR.pctClientsWaited,
+    );
+    addTile({
+      key: "coverage",
+      title: KPI_LABEL_FR.coverage,
+      subtitle: "Part des données conservées après application des filtres",
+      body: `${filteredRows.length} / ${rows.length}`,
+    });
+
+    return tiles;
   }, [filteredRows, kpis, reportConfig.kpis, rows.length]);
 
   return (
@@ -750,11 +791,6 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           <p className="text-[11px] uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300 font-bold">
             Axilus CRC Operational
           </p>
-          {headerDateLabel ? (
-            <p className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">
-              Période : {headerDateLabel}
-            </p>
-          ) : null}
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mt-3">
             Tableau de bord CRC & relations clients
           </h1>
@@ -1492,7 +1528,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             ) : null}
             {reportConfig.charts.soussPhonePie ? (
               <div className="xl:col-span-3">
-                <GlassCard className="w-full" title="Appels Souss Massa" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
+                <GlassCard className="w-full" title="Appels Souss-Massa" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
                   <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -1614,13 +1650,13 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                   </ResponsiveContainer>
                 </div>
 
-                <div className="flex justify-center rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950/90">
-                  <div className="w-full max-w-[820px]">
+                <div className="w-full rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950/90">
+                  <div className="w-full">
                     <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100 text-center">
                       Détail par tranche horaire
                     </div>
                     <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/95">
-                      <table className="min-w-[680px] w-full text-left text-[12px] leading-tight text-slate-700 dark:text-slate-300">
+                      <table className="min-w-full w-full text-left text-[12px] leading-tight text-slate-700 dark:text-slate-300">
                         <thead className="bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
                           <tr>
                             <th className="px-3 py-3 font-semibold text-left">Shift</th>
@@ -1661,6 +1697,30 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                     </div>
                   </div>
                 </div>
+              </div>
+            </GlassCard>
+          ) : null}
+
+          {reportConfig.charts.peakHours ? (
+            <GlassCard title="Heures de pointe d'appels" subtitle="Volume d'appels par heure de la journée">
+              <div className="h-[340px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={hourlyCallSeries}>
+                    <CartesianGrid stroke={palette.grid} strokeDasharray="4 8" vertical={false} />
+                    <XAxis dataKey="hour" tick={{ fill: palette.muted, fontSize: 12 }} />
+                    <YAxis tick={{ fill: palette.muted }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: palette.tooltipBg,
+                        borderRadius: 12,
+                        border: `1px solid ${palette.grid}`,
+                      }}
+                      labelStyle={{ color: palette.fg }}
+                      formatter={(value: number) => [`${value.toLocaleString("fr-FR")} appels`, "Heure"]}
+                    />
+                    <Bar dataKey="count" fill={palette.series[1]} radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </GlassCard>
           ) : null}

@@ -6,7 +6,7 @@ import type { CrcRow } from "../crc-types";
 import { KPI_CARD, PPTX_CRC } from "./pptx-theme";
 
 const KPI_LABEL: Record<CrcKpiKey, string> = {
-  totalVolume: "Total interactions",
+  totalVolume: "Total Appels",
   abandons: "Appels abandonnés",
   decrochesInterrompus: "Appels décrochés interrompus",
   informes: "Clients informés",

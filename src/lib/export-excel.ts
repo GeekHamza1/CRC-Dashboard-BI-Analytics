@@ -35,7 +35,7 @@ export function exportCrcExcel(
     const intro = XLSX.utils.aoa_to_sheet([
       ["SRM - CRC Reporting Export"],
       ["Généré le", reportTimestamp()],
-      ["Total interactions", rows.length],
+      ["Total Appels", rows.length],
       ["Style", "Operational CRC management workbook"],
       [],
       ["Code couleur Résultat", "Hex"],

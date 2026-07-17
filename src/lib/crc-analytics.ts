@@ -209,6 +209,18 @@ export function shiftResultDistribution(rows: CrcRow[]): ShiftResultDistribution
   };
 }
 
+export function hourlyCallDistribution(rows: CrcRow[]) {
+  const counts = new Array(24).fill(0);
+  rows.forEach((row) => {
+    if (!row.date) return;
+    counts[row.date.getHours()] += 1;
+  });
+  return counts.map((count, hour) => ({
+    hour: `${String(hour).padStart(2, "0")}h`,
+    count,
+  }));
+}
+
 export function globalKpis(rows: CrcRow[]) {
   const abandons = rows.filter((r) => classifyStatus(r.résultat) === "abandon").length;
   const appelsDecrochesInterrompus = rows.filter(

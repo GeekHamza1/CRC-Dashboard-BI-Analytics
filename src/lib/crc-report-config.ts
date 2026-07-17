@@ -10,6 +10,7 @@ export type CrcChartKey =
   | "dailyArea"
   | "monthlyBars"
   | "shiftBars"
+  | "peakHours"
   | "trendLine"
   | "teleopBars"
   | "regionCards";
@@ -99,6 +100,7 @@ export const CRC_CHART_KEYS = [
   "dailyArea",
   "monthlyBars",
   "shiftBars",
+  "peakHours",
   "trendLine",
   "teleopBars",
   "regionCards",
