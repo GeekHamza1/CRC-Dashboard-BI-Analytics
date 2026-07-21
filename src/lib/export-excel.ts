@@ -133,7 +133,7 @@ export function exportCrcExcel(
       for (const k of teleK) r[k] = numericValue(o, k);
       return r;
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Classement téléopérateurs");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(slim), "Classement des téléopérateurs");
   }
 
   if (sh.daily) {

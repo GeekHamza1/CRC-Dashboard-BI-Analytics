@@ -79,7 +79,7 @@ export async function buildAndSaveCrcPptx(
 
   if (slideCfg.cover) {
     const sd = pptx.addSlide();
-    addSlideHeader(sd, "Département Clientèle et Suivi des Performances CRC", subtitle, logoDataUrl);
+    addSlideHeader(sd, "Département Support Service Informatique DPIA", subtitle, logoDataUrl);
     sd.addText(title, {
       x: 0.8,
       y: 1.35,

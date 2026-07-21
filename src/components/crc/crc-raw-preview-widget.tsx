@@ -313,8 +313,8 @@ export function CrcRawPreviewWidget(props: {
 
   return (
     <GlassShell
-      title="Grille brute (extrait contrôlé)"
-      subtitle="Prévisualisation jusqu'à 200 lignes — colonnes et exports alignés sur l'état dashboard."
+      title="Liste des appels et des tickets"
+      subtitle="Consultez les appels et les tickets correspondant aux critères sélectionnés."
       toolbar={toolbar}
     >
       {chartPanel}

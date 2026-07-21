@@ -158,11 +158,11 @@ const CHART_LABEL_FR: Record<CrcChartKey, string> = {
   provincesPie: "Camemberts provinces par région",
   soussPhonePie: "Camembert Souss-Massa— téléphone ligne Verte / Ligne Analogique DPIA",
   dailyArea: "Courbes cumulées par jour",
-  monthlyBars: "Barres empilées par mois",
+  monthlyBars: "Nombre d'appels par mois et par région",
   shiftBars: "Répartition shifts horaires",
   peakHours: "Heures de pointe d'appels",
   trendLine: "Tendance totale jour",
-  teleopBars: "Classement téléopérateurs (diagramme)",
+  teleopBars: "Classement des téléopérateurs (diagramme)",
   regionCards: "Cartes région Drâa / Laâyoune / Souss-Massa/ Inconnu",
 };
 
@@ -170,7 +170,7 @@ const TABLE_LABEL_FR: Record<CrcTableKey, string> = {
   pivotResult: "Résultat par région",
   pivotMetier: "Métier par région",
   pivotNature: "Nature par région",
-  teleOpStats: "Table Statistiques téléopérateurs",
+  teleOpStats: "Table Statistiques des téléopérateurs",
   rawPreview: "Grille brute (extrait)",
 };
 
@@ -191,7 +191,7 @@ const EXCEL_SHEET_LABELS: { id: ExcelSheetKey; label: string }[] = [
   { id: "pivotResult", label: "Résultat par région" },
   { id: "pivotMetier", label: "Métier par région" },
   { id: "pivotNature", label: "Nature par région" },
-  { id: "operators", label: "Classement téléopérateurs" },
+  { id: "operators", label: "Classement des téléopérateurs" },
   { id: "daily", label: "Évolution journalière" },
   { id: "hourly", label: "Appels par heure" },
   { id: "monthly", label: "Évolution mensuelle" },
@@ -332,12 +332,18 @@ export default function CrcDashboard() {
       const res = [...new Set(parsed.rows.map((r) => r.résultat))].sort((a, b) =>
         a.localeCompare(b, "fr"),
       );
-      /** reset filtres fichier */
+      /** reset filtres fichier and auto-fill date bounds from data */
+      const dates = parsed.rows.map((r) => r.date).filter(Boolean) as Date[];
+      const iso = (d: Date) => d.toISOString().slice(0, 10);
+      const dateFrom = dates.length ? iso(new Date(Math.min(...dates.map((d) => d.getTime())))) : null;
+      const dateTo = dates.length ? iso(new Date(Math.max(...dates.map((d) => d.getTime())))) : null;
       setFilters({
         ...defaultDashboardFilters(),
         téléopérateurs: ops,
         résultats: res,
         régions: [...REGION_ORDER],
+        dateFrom,
+        dateTo,
       });
       setColumnVisibility(defaultCrcColumnVisibility());
     } finally {
@@ -367,6 +373,14 @@ export default function CrcDashboard() {
   }, [filters, rows]);
 
   const filteredRows = useMemo(() => applyFilters(rows, effectiveFilters), [rows, effectiveFilters]);
+  const dateBounds = useMemo(() => {
+    const ds = rows.map((r) => r.date).filter(Boolean) as Date[];
+    if (!ds.length) return { min: null as string | null, max: null as string | null };
+    const min = new Date(Math.min(...ds.map((d) => d.getTime())));
+    const max = new Date(Math.max(...ds.map((d) => d.getTime())));
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    return { min: iso(min), max: iso(max) };
+  }, [rows]);
   const shiftDistribution = useMemo(() => shiftResultDistribution(filteredRows), [filteredRows]);
   const hourlyCallSeries = useMemo(() => hourlyCallDistribution(filteredRows), [filteredRows]);
   const shiftWaitBuckets = useMemo(
@@ -665,7 +679,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
   const exportTitlePdf =
     reportConfig.reportTitle.trim() ||
-    "Département Clientèle et Suivi des Performances CRC";
+    "Département Support Service Informatique DPIA";
 
   const kpiTiles = useMemo(() => {
     type Item = { key: CrcKpiKey; title: string; subtitle: string; body: ReactNode };
@@ -1327,23 +1341,33 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       type="date"
                       className="rounded-xl border px-3 py-1.5 text-sm bg-white/80 dark:bg-slate-900/70 dark:border-slate-600"
                       value={filters.dateFrom ?? ""}
-                      onChange={(e) =>
+                      min={dateBounds.min ?? undefined}
+                      max={dateBounds.max ?? undefined}
+                      onChange={(e) => {
+                        let v = e.target.value || null;
+                        if (v && dateBounds.min && v < dateBounds.min) v = dateBounds.min;
+                        if (v && dateBounds.max && v > dateBounds.max) v = dateBounds.max;
                         setFilters((f) => ({
                           ...f,
-                          dateFrom: e.target.value || null,
-                        }))
-                      }
+                          dateFrom: v,
+                        }));
+                      }}
                     />
                     <input
                       type="date"
                       className="rounded-xl border px-3 py-1.5 text-sm bg-white/80 dark:bg-slate-900/70 dark:border-slate-600"
                       value={filters.dateTo ?? ""}
-                      onChange={(e) =>
+                      min={dateBounds.min ?? undefined}
+                      max={dateBounds.max ?? undefined}
+                      onChange={(e) => {
+                        let v = e.target.value || null;
+                        if (v && dateBounds.min && v < dateBounds.min) v = dateBounds.min;
+                        if (v && dateBounds.max && v > dateBounds.max) v = dateBounds.max;
                         setFilters((f) => ({
                           ...f,
-                          dateTo: e.target.value || null,
-                        }))
-                      }
+                          dateTo: v,
+                        }));
+                      }}
                     />
                   </div>
                 </div>
@@ -1404,9 +1428,29 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
           {kpiTiles.length ? (
             <div>
-              {headerDateLabel ? (
+              {(filters?.dateFrom || filters?.dateTo || headerDateLabel) ? (
                 <p className="text-3xl sm:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight mb-4">
-                  Période : {headerDateLabel}
+                  Période : {(() => {
+                    const formatDisplayDate = (d: any) => {
+                      if (!d) return "";
+                      try {
+                        return new Date(d + "T00:00:00").toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        });
+                      } catch {
+                        return String(d);
+                      }
+                    };
+                    if (filters?.dateFrom || filters?.dateTo) {
+                      const from = filters?.dateFrom ? formatDisplayDate(filters.dateFrom) : "";
+                      const to = filters?.dateTo ? formatDisplayDate(filters.dateTo) : "";
+                      if (from && to) return `${from} → ${to}`;
+                      return from || to;
+                    }
+                    return headerDateLabel;
+                  })()}
                 </p>
               ) : null}
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1499,7 +1543,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               </GlassCard>
             ) : null}
             {reportConfig.charts.statusPie ? (
-              <GlassCard title="Répartition KPI statuts critiques" subtitle="Couleurs Résultat figées sur tout le dashboard">
+              <GlassCard title="Répartition des résultats des appels" subtitle="Couleurs Résultat figées sur tout le dashboard">
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -1584,7 +1628,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           {(reportConfig.charts.dailyArea || reportConfig.charts.monthlyBars) && (
             <div className="grid xl:grid-cols-2 gap-4">
               {reportConfig.charts.dailyArea ? (
-                <GlassCard title="Courbe cumul jour / régions" subtitle="Stacks translucides harmonisées">
+                <GlassCard title="Évolution des appels par région" subtitle="Comparez le nombre d'appels de chaque région au fil des journées.">
                   <div className="h-[340px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={sérieJour}>
@@ -1610,7 +1654,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               ) : null}
 
               {reportConfig.charts.monthlyBars ? (
-                <GlassCard title="Barres empilées par mois" subtitle="Colonnes région canon + Mois métier métier hors colonne Dates">
+                <GlassCard title="Nombre d'appels par mois et par région" subtitle="Comparez le volume d'appels de chaque région pour chaque mois.">
                   <div className="h-[340px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={sérieMois}>
@@ -1748,7 +1792,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           ) : null}
 
           {reportConfig.charts.trendLine ? (
-            <GlassCard title="Tendance brute totale journée" subtitle="Ligne générale hors stack">
+            <GlassCard title="Évolution du nombre d'appels par journée" subtitle="Vue d'ensemble du volume total d'appels par jour.">
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={sérieJour}>
@@ -1790,7 +1834,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             {reportConfig.tables.pivotMetier ? (
               <GlassCard
                 title="2. Métier × Régions"
-                subtitle="Métiers issus Page3 après normalisation d'étiquettes"
+                subtitle="Métiers par Régions"
               >
                 <div className="mb-4 flex items-center gap-3 flex-wrap">
                   <label className="text-xs font-semibold uppercase text-slate-500">
@@ -1840,7 +1884,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           {reportConfig.tables.pivotNature ? (
             <CrcRegionPivotWidget
               widgetId="pivotNature"
-              title="3. Nature de réclamation × Régions"
+              title="3. Nature de réclamation par Régions"
               subtitle={`${pivotNat.length} natures différentes · focus qualité dossiers`}
               labelHeader="Nature de Réclamation"
               rowLabelKey="nature"
@@ -1856,7 +1900,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           ) : null}
 
           {reportConfig.charts.teleopBars ? (
-            <GlassCard title="Classement téléopérateurs" subtitle="Groupes lisibles volume / KPI qualité sans double comptabilisation graphique">
+            <GlassCard title="Classement des téléopérateurs" subtitle="Comparez les performances de chaque téléopérateur selon le nombre d'appels traités et les résultats obtenus.">
             <div className="h-[440px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart layout="vertical" data={téléBar} margin={{ left: 28, right: 12 }}>

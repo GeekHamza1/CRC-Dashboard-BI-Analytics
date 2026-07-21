@@ -199,7 +199,7 @@ export async function exportTeleOpPdf(ops: OperatorRankRow[], metricKeys: string
   }
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
-  doc.text("Statistiques téléopérateurs", 28, 16);
+  doc.text("Statistiques des téléopérateurs", 28, 16);
 
   const head = ["Téléopérateur", ...metricKeys.map((k) => labelForTeleKey(k))];
   const body = ops.map((o) => [
@@ -257,7 +257,7 @@ export async function exportTeleOpPptx(ops: OperatorRankRow[], metricKeys: strin
       slide.addImage({ data: logo, x: 0.35, y: 0.1, w: 0.65, h: 0.48 });
     } catch {}
   }
-  slide.addText("Statistiques téléopérateurs", { x: 1.15, y: 0.2, fontSize: 16, bold: true, color: "FFFFFF" });
+  slide.addText("Statistiques des téléopérateurs", { x: 1.15, y: 0.2, fontSize: 16, bold: true, color: "FFFFFF" });
 
   const head = [
     { text: "Téléopérateur", options: { bold: true, fill: { color: "334155" }, color: "FFFFFF" } },

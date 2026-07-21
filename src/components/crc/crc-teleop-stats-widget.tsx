@@ -277,8 +277,8 @@ export function CrcTeleopStatsWidget(props: {
 
   return (
     <GlassShell
-      title="Statistiques téléopérateurs"
-      subtitle="Colonnes issues du résultat normalisé — contrôle colonnes & exports ci-dessous."
+      title="Statistiques des téléopérateurs"
+      subtitle="Consultez les performances et l'activité de chaque téléopérateur."
       toolbar={toolbar}
     >
       {chartPanel}

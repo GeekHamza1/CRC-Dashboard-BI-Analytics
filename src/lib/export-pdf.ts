@@ -177,7 +177,7 @@ function lastTableY(doc: jsPDF): number {
 
 export async function exportCrcPdf(
   rows: CrcRow[],
-  title = "Département Clientèle et Suivi des Performances CRC",
+  title = "Département Support Service Informatique DPIA",
   basename = "crc_axilus_export",
   opts?: {
     subtitle?: string;
@@ -480,7 +480,7 @@ export async function exportCrcPdf(
         /** ignore */
       }
     }
-    drawFooter(doc, "Classement téléopérateurs");
+    drawFooter(doc, "Classement des téléopérateurs");
   }
 
   if (pdfCfg.horaires) {
