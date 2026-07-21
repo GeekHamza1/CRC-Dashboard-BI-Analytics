@@ -151,18 +151,18 @@ function parseMulti(select: HTMLSelectElement) {
 }
 
 const CHART_LABEL_FR: Record<CrcChartKey, string> = {
-  geoBars: "Histogramme régions canon",
+  geoBars: "Appels par région",
   geoDonut: "Répartition géographique",
-  statusPie: "Camembert résultats (libellés standardisés)",
+  statusPie: "Répartition des résultats des appels",
   waitedResultPie: "Résultats des Appels orientés vers la file d’attente.",
-  provincesPie: "Camemberts provinces par région",
-  soussPhonePie: "Camembert Souss-Massa— téléphone ligne Verte / Ligne Analogique DPIA",
-  dailyArea: "Courbes cumulées par jour",
+  provincesPie: "Provinces par région",
+  soussPhonePie: "Appels Souss-Massa",
+  dailyArea: "Évolution des appels par région",
   monthlyBars: "Nombre d'appels par mois et par région",
   shiftBars: "Répartition shifts horaires",
   peakHours: "Heures de pointe d'appels",
-  trendLine: "Tendance totale jour",
-  teleopBars: "Classement des téléopérateurs (diagramme)",
+  trendLine: "Évolution du nombre d'appels par journée",
+  teleopBars: "Classement des téléopérateurs",
   regionCards: "Cartes région Drâa / Laâyoune / Souss-Massa/ Inconnu",
 };
 
@@ -171,7 +171,7 @@ const TABLE_LABEL_FR: Record<CrcTableKey, string> = {
   pivotMetier: "Métier par région",
   pivotNature: "Nature par région",
   teleOpStats: "Table Statistiques des téléopérateurs",
-  rawPreview: "Grille brute (extrait)",
+  rawPreview: "Liste des appels et des tickets",
 };
 
 const PDF_BLOCK_LABELS: { id: PdfBundleKey; label: string }[] = [
@@ -810,7 +810,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             Axilus CRC Operational
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mt-3">
-            Tableau de bord CRC & relations clients
+            Tableau de bord CRC
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl mt-4 leading-relaxed">
             Données issues des exports bureau Axilus : traitements, contacts répétés et réclamations

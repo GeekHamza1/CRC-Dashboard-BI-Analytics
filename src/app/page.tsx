@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { Footer } from "@/components/footer";
 
 const CrcDashboard = dynamic(
   () => import("@/components/crc/crc-dashboard"),
@@ -15,5 +16,12 @@ const CrcDashboard = dynamic(
 );
 
 export default function HomePage() {
-  return <CrcDashboard />;
+  return (
+    <>
+      <main className="flex-grow">
+        <CrcDashboard />
+      </main>
+      <Footer />
+    </>
+  );
 }
