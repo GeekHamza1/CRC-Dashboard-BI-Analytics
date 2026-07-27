@@ -1603,39 +1603,6 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                 </div>
               </GlassCard>
             ) : null}
-            {reportConfig.charts.waitedResultPie ? (
-              <div className="xl:col-span-3">
-                <GlassCard title="Résultats des Appels orientés vers la file d’attente." subtitle="Distribution des résultats et tranches de temps d’attente">
-                  <div className="grid gap-4 xl:grid-cols-[1.45fr_minmax(280px,340px)]">
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={waitedResultPieData} dataKey="value" cx="48%" outerRadius={100} stroke="none">
-                            {waitedResultPieData.map((d) => (
-                              <Cell key={d.name} fill={d.fill} />
-                            ))}
-                          </Pie>
-                          <Legend formatter={(v) => <span style={{ color: palette.fg }}>{v}</span>} />
-                          {chartTooltip}
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
-                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Tranches de temps d’attente</div>
-                      <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
-                        {waitedTimeBuckets.map((bucket) => (
-                          <div key={bucket.label} className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 border border-slate-200 dark:bg-slate-900/80 dark:border-slate-700">
-                            <span>{bucket.label}</span>
-                            <span className="font-semibold tabular-nums">{bucket.count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </GlassCard>
-              </div>
-            ) : null}
             {reportConfig.charts.soussPhonePie ? (
               <div className="xl:col-span-3">
                 <GlassCard className="w-full" title="Appels Souss-Massa" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
@@ -1809,6 +1776,40 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                 </div>
               </div>
             </GlassCard>
+          ) : null}
+
+          {reportConfig.charts.waitedResultPie ? (
+            <div className="w-full">
+              <GlassCard title="Résultats des Appels orientés vers la file d’attente." subtitle="Distribution des résultats et tranches de temps d’attente">
+                <div className="grid gap-4 xl:grid-cols-[1.45fr_minmax(280px,340px)]">
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={waitedResultPieData} dataKey="value" cx="48%" outerRadius={100} stroke="none">
+                          {waitedResultPieData.map((d) => (
+                            <Cell key={d.name} fill={d.fill} />
+                          ))}
+                        </Pie>
+                        <Legend formatter={(v) => <span style={{ color: palette.fg }}>{v}</span>} />
+                        {chartTooltip}
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Tranches de temps d’attente</div>
+                    <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                      {waitedTimeBuckets.map((bucket) => (
+                        <div key={bucket.label} className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 border border-slate-200 dark:bg-slate-900/80 dark:border-slate-700">
+                          <span>{bucket.label}</span>
+                          <span className="font-semibold tabular-nums">{bucket.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
+            </div>
           ) : null}
 
           {reportConfig.charts.peakHours ? (
