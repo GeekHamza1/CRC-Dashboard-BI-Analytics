@@ -30,6 +30,8 @@ import {
   isEmptyField,
   monthlySeries,
   operatorRanking,
+  resultDailySeries,
+  resultHourlySeries,
   parseQueueSeconds,
   pivotMétierParRégion,
   pivotNatureParRégion,
@@ -157,6 +159,7 @@ const CHART_LABEL_FR: Record<CrcChartKey, string> = {
   waitedResultPie: "Résultats des Appels orientés vers la file d’attente.",
   provincesPie: "Provinces par région",
   soussPhonePie: "Appels Souss-Massa",
+  callResultsArea: "Évolution des résultats des appels",
   dailyArea: "Évolution des appels par région",
   monthlyBars: "Nombre d'appels par mois et par région",
   shiftBars: "Répartition shifts horaires",
@@ -316,6 +319,7 @@ export default function CrcDashboard() {
   const [configOpen, setConfigOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [exportUsesFilters, setExportUsesFilters] = useState(true);
+  const [resultTimelineGranularity, setResultTimelineGranularity] = useState<"day" | "hour">("day");
 
   const onFile = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -426,6 +430,8 @@ export default function CrcDashboard() {
 }, [filteredRows, metierResultatFilter]);
   const pivotNat = useMemo(() => pivotNatureParRégion(filteredRows), [filteredRows]);
   const sérieJour = useMemo(() => dailySeries(filteredRows), [filteredRows]);
+  const résultatSérieJour = useMemo(() => resultDailySeries(filteredRows), [filteredRows]);
+  const résultatSérieHeure = useMemo(() => resultHourlySeries(filteredRows), [filteredRows]);
   const sérieMois = useMemo(() => monthlySeries(filteredRows), [filteredRows]);
   const téléopRanking = useMemo(() => operatorRanking(filteredRows), [filteredRows]);
 
@@ -601,6 +607,17 @@ const chartTooltip = (
     value: kpis.appelsParRégion.get(rg) ?? 0,
     fill: REGION_COLORS[rg],
   }));
+
+  const résultatSeriesKeys = useMemo(() => {
+    const keys = new Set<string>();
+    const source = resultTimelineGranularity === "day" ? résultatSérieJour : résultatSérieHeure;
+    source.forEach((row) => {
+      Object.keys(row).forEach((key) => {
+        if (key !== "jour" && key !== "hour" && key !== "total") keys.add(key);
+      });
+    });
+    return [...keys].sort(compareResultBuckets);
+  }, [resultTimelineGranularity, résultatSérieJour, résultatSérieHeure]);
 
   const résultatPieData = useMemo(() => {
     const buckets = filteredRows.map((r) => r.résultat);
@@ -1813,6 +1830,62 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                     />
                     <Bar dataKey="count" fill={palette.series[1]} radius={[10, 10, 0, 0]} />
                   </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </GlassCard>
+          ) : null}
+
+          {reportConfig.charts.callResultsArea ? (
+            <GlassCard
+              title="Évolution des résultats des appels"
+              subtitle={resultTimelineGranularity === "day" ? "Suivi du volume des résultats au fil des jours." : "Suivi du volume des résultats par tranche horaire."}
+              action={
+                <div className="inline-flex rounded-full border border-slate-300 bg-white/80 p-1 shadow-sm dark:border-slate-700 dark:bg-slate-950/80">
+                  {(["day", "hour"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setResultTimelineGranularity(value)}
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
+                        resultTimelineGranularity === value
+                          ? "bg-sky-600 text-white shadow-sm"
+                          : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+                      }`}
+                    >
+                      {value === "day" ? "Par jour" : "Par heure"}
+                    </button>
+                  ))}
+                </div>
+              }
+            >
+              <div className="h-[340px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={resultTimelineGranularity === "day" ? résultatSérieJour : résultatSérieHeure}>
+                    <CartesianGrid stroke={palette.grid} strokeDasharray="4 8" vertical={false} />
+                    <XAxis
+                      dataKey={resultTimelineGranularity === "day" ? "jour" : "hour"}
+                      tick={{ fill: palette.muted, fontSize: 10 }}
+                      interval={0}
+                      minTickGap={6}
+                      height={40}
+                      hide={false}
+                    />
+                    <YAxis tick={{ fill: palette.muted }} />
+                    <Legend formatter={(value) => <span style={{ color: palette.fg }}>{value}</span>} />
+                    {chartTooltip}
+                    {résultatSeriesKeys.map((resultKey) => (
+                      <Area
+                        key={resultKey}
+                        type="monotone"
+                        dataKey={resultKey}
+                        stackId="results"
+                        stroke={getResultColor(resultKey)}
+                        fill={getResultColor(resultKey)}
+                        fillOpacity={0.24}
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </GlassCard>

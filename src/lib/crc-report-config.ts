@@ -7,6 +7,7 @@ export type CrcChartKey =
   | "waitedResultPie"
   | "provincesPie"
   | "soussPhonePie"
+  | "callResultsArea"
   | "dailyArea"
   | "monthlyBars"
   | "shiftBars"
@@ -102,6 +103,7 @@ export const CRC_CHART_KEYS = [
   "waitedResultPie",
   "provincesPie",
   "soussPhonePie",
+  "callResultsArea",
   "dailyArea",
   "monthlyBars",
   "shiftBars",

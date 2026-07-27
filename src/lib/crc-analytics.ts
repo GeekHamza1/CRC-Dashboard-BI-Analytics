@@ -357,6 +357,56 @@ export function dailySeries(rows: CrcRow[]) {
     return out;
   });
 }
+
+export function resultDailySeries(rows: CrcRow[]) {
+  const bucket = new Map<string, Record<string, number>>();
+  const resultLabels = [...new Set(rows.map((row) => row.résultat))].sort(compareResultBuckets);
+
+  rows.forEach((row) => {
+    if (!row.date) return;
+    const key = ymd(row.date);
+    const hit = bucket.get(key) ?? Object.fromEntries(resultLabels.map((label) => [label, 0])) as Record<string, number>;
+    const result = row.résultat || NON_RENSEIGNE;
+    hit[result] = (hit[result] ?? 0) + 1;
+    bucket.set(key, hit);
+  });
+
+  return [...bucket.keys()].sort().map((jour) => {
+    const d = bucket.get(jour)!;
+    const out: Record<string, string | number> = { jour, total: 0 };
+    resultLabels.forEach((label) => {
+      out[label] = d[label] ?? 0;
+      out.total = Number(out.total) + (d[label] ?? 0);
+    });
+    return out;
+  });
+}
+
+export function resultHourlySeries(rows: CrcRow[]) {
+  const resultLabels = [...new Set(rows.map((row) => row.résultat))].sort(compareResultBuckets);
+  const buckets = Array.from({ length: 24 }, (_, hour) => {
+    const out: Record<string, string | number> = {
+      hour: `${String(hour).padStart(2, "0")}h`,
+      total: 0,
+    };
+    resultLabels.forEach((label) => {
+      out[label] = 0;
+    });
+    return out;
+  });
+
+  rows.forEach((row) => {
+    if (!row.date) return;
+    const hour = row.date.getHours();
+    const bucket = buckets[hour];
+    const result = row.résultat || NON_RENSEIGNE;
+    bucket[result] = (Number(bucket[result]) ?? 0) + 1;
+    bucket.total = Number(bucket.total) + 1;
+  });
+
+  return buckets;
+}
+
 const MONTH_INDEX_FR: Record<string, number> = {
   janvier: 0,
   février: 1,
