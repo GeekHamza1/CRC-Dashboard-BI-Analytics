@@ -750,13 +750,31 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
       key: "abandons",
       title: KPI_LABEL_FR.abandons,
       subtitle: "Nombre total des appels abandonnés.",
-      body: kpis.appelsAbandonnés,
+      body: (
+        <div className="space-y-2">
+          <div className="text-4xl font-bold tabular-nums">{kpis.appelsAbandonnés}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">
+            {filteredRows.length
+              ? `${((kpis.appelsAbandonnés / filteredRows.length) * 100).toFixed(1)} %`
+              : "—"}
+          </div>
+        </div>
+      ),
     });
     addTile({
       key: "decrochesInterrompus",
       title: KPI_LABEL_FR.decrochesInterrompus,
       subtitle: "Nombre d'appels décrochés puis interrompus.",
-      body: kpis.appelsDécrochésInterrompus,
+      body: (
+        <div className="space-y-2">
+          <div className="text-4xl font-bold tabular-nums">{kpis.appelsDécrochésInterrompus}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">
+            {filteredRows.length
+              ? `${((kpis.appelsDécrochésInterrompus / filteredRows.length) * 100).toFixed(1)} %`
+              : "—"}
+          </div>
+        </div>
+      ),
     });
     addPairedTile(
       "informes",
@@ -1725,24 +1743,24 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                   </ResponsiveContainer>
                 </div>
 
-                <div className="w-full rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-950/90">
+                <div className="w-full rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm dark:border-slate-700 dark:bg-slate-950/90">
                   <div className="w-full">
-                    <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100 text-center">
+                    <div className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100 text-center">
                       Détail par tranche horaire
                     </div>
                     <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/95">
-                      <table className="min-w-full w-full text-left text-[12px] leading-tight text-slate-700 dark:text-slate-300">
+                      <table className="min-w-[860px] w-full border-collapse text-left text-sm leading-6 text-slate-700 dark:text-slate-300">
                         <thead className="bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
                           <tr>
-                            <th className="px-3 py-3 font-semibold text-left">Shift</th>
+                            <th className="px-4 py-4 font-semibold text-left whitespace-nowrap">Shift</th>
                             {shiftDistribution.resultLabels.map((result) => (
-                              <th key={result} className="px-3 py-3 font-semibold text-right">
+                              <th key={result} className="px-4 py-4 font-semibold text-right whitespace-nowrap">
                                 {result}
                               </th>
                             ))}
-                            <th className="px-3 py-3 font-semibold text-right">Total</th>
-                            <th className="px-3 py-3 font-semibold text-right">Attendus</th>
-                            <th className="px-3 py-3 font-semibold text-right">% attendus</th>
+                            <th className="px-4 py-4 font-semibold text-right whitespace-nowrap">Total</th>
+                            <th className="px-4 py-4 font-semibold text-right whitespace-nowrap">File d'attente</th>
+                            <th className="px-4 py-4 font-semibold text-right whitespace-nowrap">% en file d'attente</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1755,15 +1773,15 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                                 key={bucket.label}
                                 className={`${index % 2 === 0 ? "bg-white dark:bg-slate-950" : "bg-slate-50 dark:bg-slate-900"} border-t border-slate-200 dark:border-slate-800`}
                               >
-                                <td className="px-3 py-3 font-medium text-slate-900 dark:text-slate-100">{bucket.label}</td>
+                                <td className="px-4 py-4 font-semibold text-slate-900 dark:text-slate-100">{bucket.label}</td>
                                 {shiftDistribution.resultLabels.map((result) => (
-                                  <td key={result} className="px-3 py-3 text-right">
+                                  <td key={result} className="px-4 py-4 text-right">
                                     {(bucket[result] as number) ?? 0}
                                   </td>
                                 ))}
-                                <td className="px-3 py-3 text-right font-semibold">{bucket.count}</td>
-                                <td className="px-3 py-3 text-right font-semibold">{waited}</td>
-                                <td className="px-3 py-3 text-right">{pctWaited}</td>
+                                <td className="px-4 py-4 text-right font-semibold">{bucket.count}</td>
+                                <td className="px-4 py-4 text-right font-semibold">{waited}</td>
+                                <td className="px-4 py-4 text-right">{pctWaited}</td>
                               </tr>
                             );
                           })}
@@ -2174,10 +2192,19 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
               </button>
             </div>
             <div className="max-h-[65vh] overflow-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-              <table className="min-w-[1100px] w-full text-xs">
+              <table className="min-w-[1200px] w-full text-xs">
                 <thead className="bg-slate-900 text-white sticky top-0">
                   <tr>
-                    {["Date + Heure", "Téléopérateur", "Résultat brut Excel", "Métier", "Région", "Téléphone", "Nature de réclamation"].map((h) => (
+                    {[
+                      "Date + Heure",
+                      "Téléopérateur",
+                      "Résultat brut Excel",
+                      ...(detailKpi === "abandons" ? ["File d’attente"] : []),
+                      "Métier",
+                      "Région",
+                      "Téléphone",
+                      "Nature de réclamation",
+                    ].map((h) => (
                       <th key={h} className="px-2 py-2 text-left whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -2188,6 +2215,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       <td className="px-2 py-1">{formatDateTime(r.date)}</td>
                       <td className="px-2 py-1">{r.téléopérateur}</td>
                       <td className="px-2 py-1">{r.résultat}</td>
+                      {detailKpi === "abandons" ? <td className="px-2 py-1">{r.tempsAttenteQueue || "—"}</td> : null}
                       <td className="px-2 py-1">{r.metier}</td>
                       <td className="px-2 py-1">{REGION_SHORT[r.régionCanon]}</td>
                       <td className="px-2 py-1 font-mono">{r.téléphone}</td>
