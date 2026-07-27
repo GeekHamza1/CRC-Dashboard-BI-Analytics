@@ -651,13 +651,22 @@ const chartTooltip = (
     return /[\*✱]|\basterisk\b/i.test(normalized);
   };
 
+  const isAccueilPhone = (phone: string) => {
+    const normalized = String(phone ?? "").trim();
+    return /5000/.test(normalized);
+  };
+
   const sousAsteriskPieData = useMemo<{ name: string; value: number }[]>(() => {
     const sousRows = filteredRows.filter((r) => r.régionCanon === "Souss-Massa");
     const asteriskCount = sousRows.filter((r) => isAsteriskPhone(r.téléphone)).length;
-    const otherCount = sousRows.length - asteriskCount;
+    const accueilCount = sousRows.filter(
+      (r) => !isAsteriskPhone(r.téléphone) && isAccueilPhone(r.téléphone),
+    ).length;
+    const otherCount = sousRows.length - asteriskCount - accueilCount;
 
     return [
       { name: "Ligne analogique DPIA", value: asteriskCount },
+      { name: "Téléphone d'accueil", value: accueilCount },
       { name: "Ligne verte", value: otherCount },
     ].filter((d) => d.value > 0);
   }, [filteredRows]);
