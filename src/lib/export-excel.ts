@@ -12,7 +12,6 @@ import {
   pivotMétierParRégion,
   pivotNatureParRégion,
   pivotRésultatParRégion,
-  rowHasQueueWait,
   shiftResultDistribution,
 } from "./crc-analytics";
 import { RESULT_COLORS } from "./constants/chart-colors";

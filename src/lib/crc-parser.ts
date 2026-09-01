@@ -183,19 +183,6 @@ function buildHeaderMap(headers: string[]): Map<number, RowField | null> {
   return map;
 }
 
-function excelSerialToDate(serial: number): Date | null {
-  if (!Number.isFinite(serial)) return null;
-  const utcDays = Math.floor(serial - 25569);
-  const utcValue = utcDays * 86400;
-  const dateInfo = new Date(utcValue * 1000);
-  if (Number.isNaN(dateInfo.getTime())) return null;
-
-  const fractionalDay = serial - Math.floor(serial);
-  const totalSeconds = Math.round(86400 * fractionalDay);
-  dateInfo.setSeconds(dateInfo.getSeconds() + totalSeconds);
-  return dateInfo;
-}
-
 function parseFlexibleDate(cell: RawCell): Date | null {
   if (cell == null || cell === "") {
     return null;
@@ -410,6 +397,7 @@ export function parseWorkbook(wb: XLSX.WorkBook, fileHintName = ""): ParseResult
       provinces: "",
       communes: "",
       metier: "",
+      phoneLinesSource: "",
     };
 
     colMap.forEach((field, colIdx) => {

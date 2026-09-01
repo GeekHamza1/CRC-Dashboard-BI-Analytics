@@ -28,7 +28,6 @@ import {
   globalKpis,
   hourlyCallDistribution,
   isEmptyField,
-  monthlySeries,
   operatorRanking,
   resultDailySeries,
   resultHourlySeries,
@@ -37,7 +36,6 @@ import {
   pivotNatureParRégion,
   pivotRésultatParRégion,
   rowHasQueueWait,
-  shiftBuckets,
   shiftResultDistribution,
   type DashboardFilters,
 } from "@/lib/crc-analytics";
@@ -52,7 +50,7 @@ import {
   REGION_SHORT,
   normalizePhoneLinesSource,
 } from "@/lib/crc-constants";
-import { displayLabel, parseImportedFile } from "@/lib/crc-parser";
+import { parseImportedFile } from "@/lib/crc-parser";
 import {
   type CrcChartKey,
   type CrcKpiKey,
@@ -93,7 +91,7 @@ import { exportCrcExcel } from "@/lib/export-excel";
 import { exportCrcPdf } from "@/lib/export-pdf";
 import { exportCrcPowerPoint } from "@/lib/export-pptx";
 
-import type { CrcRow, ParseDebug } from "@/lib/crc-types";
+import type { CrcRow } from "@/lib/crc-types";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 function GlassCard({
@@ -147,10 +145,6 @@ const INVESTIGATION_COLS: InvestigationColumnKey[] = [
 function formatDateTime(d: Date | null) {
   if (!d) return "";
   return `${d.toLocaleDateString("fr-FR")} à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
-}
-
-function parseMulti(select: HTMLSelectElement) {
-  return [...select.selectedOptions].map((o) => o.value);
 }
 
 const CHART_LABEL_FR: Record<CrcChartKey, string> = {
@@ -312,7 +306,6 @@ export default function CrcDashboard() {
   const palette = useMemo(() => chartSemanticPalette(isDark), [isDark]);
 
   const [rows, setRows] = useState<CrcRow[]>([]);
-  const [debug, setDebug] = useState<ParseDebug | null>(null);
   const [sourceLabel, setSourceLabel] = useState("");
   const [headerDateLabel, setHeaderDateLabel] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -328,7 +321,6 @@ export default function CrcDashboard() {
     try {
       const parsed = await parseImportedFile(files[0]);
       setRows(parsed.rows);
-      setDebug(parsed.debug);
       setHeaderDateLabel(parsed.headerDateLabel ?? null);
       setSourceLabel(files[0].name);
       const ops = [...new Set(parsed.rows.map((r) => r.téléopérateur))].sort((a, b) =>
@@ -466,7 +458,6 @@ export default function CrcDashboard() {
   const sérieJour = useMemo(() => dailySeries(filteredRows), [filteredRows]);
   const résultatSérieJour = useMemo(() => resultDailySeries(filteredRows), [filteredRows]);
   const résultatSérieHeure = useMemo(() => resultHourlySeries(filteredRows), [filteredRows]);
-  const sérieMois = useMemo(() => monthlySeries(filteredRows), [filteredRows]);
   const téléopRanking = useMemo(() => operatorRanking(filteredRows), [filteredRows]);
 
   const téléOptions = [...new Set(rows.map((r) => r.téléopérateur))].sort((a, b) =>
@@ -645,12 +636,6 @@ const chartTooltip = (
   />
 );
 
-  const donutRég = visibleRegions.map((rg) => ({
-    name: REGION_SHORT[rg],
-    value: kpis.appelsParRégion.get(rg) ?? 0,
-    fill: REGION_COLORS[rg],
-  }));
-
   const résultatSeriesKeys = useMemo(() => {
     const keys = new Set<string>();
     const source = resultTimelineGranularity === "day" ? résultatSérieJour : résultatSérieHeure;
@@ -705,31 +690,6 @@ const chartTooltip = (
     },
     [filteredRows],
   );
-
-  const isAsteriskPhone = (phone: string) => {
-    const normalized = String(phone ?? "").trim();
-    return /[\*✱]|\basterisk\b/i.test(normalized);
-  };
-
-  const isAccueilPhone = (phone: string) => {
-    const normalized = String(phone ?? "").trim();
-    return /5000/.test(normalized);
-  };
-
-  const sousAsteriskPieData = useMemo<{ name: string; value: number }[]>(() => {
-    const sousRows = filteredRows.filter((r) => r.régionCanon === "Souss-Massa");
-    const asteriskCount = sousRows.filter((r) => isAsteriskPhone(r.téléphone)).length;
-    const accueilCount = sousRows.filter(
-      (r) => !isAsteriskPhone(r.téléphone) && isAccueilPhone(r.téléphone),
-    ).length;
-    const otherCount = sousRows.length - asteriskCount - accueilCount;
-
-    return [
-      { name: "Ligne analogique DPIA", value: asteriskCount },
-      { name: "Téléphone d'accueil", value: accueilCount },
-      { name: "Ligne verte", value: otherCount },
-    ].filter((d) => d.value > 0);
-  }, [filteredRows]);
 
   const phoneLinesSourcePieData = useMemo<{ name: string; value: number }[]>(() => {
     const sousRows = filteredRows.filter((r) => r.régionCanon === "Souss-Massa");
@@ -1467,7 +1427,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
 
               {/* Date range filter */}
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-3">Période d'analyse</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-3">Période d&apos;analyse</h3>
                 <div className="flex flex-wrap gap-2">
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Début</label>
@@ -1888,7 +1848,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                       <thead>
                         <tr className="border-b border-slate-200 dark:border-slate-700">
                           <th className="text-left py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">Source de Ligne</th>
-                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">Nombre d'Appels</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">Nombre d&apos;Appels</th>
                           <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">Pourcentage</th>
                         </tr>
                       </thead>
@@ -1973,8 +1933,8 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                               </th>
                             ))}
                             <th className="px-4 py-4 font-semibold text-right whitespace-nowrap">Total</th>
-                            <th className="px-4 py-4 font-semibold text-right whitespace-nowrap">File d'attente</th>
-                            <th className="px-4 py-4 font-semibold text-right whitespace-nowrap">% en file d'attente</th>
+                            <th className="px-4 py-4 font-semibold text-right whitespace-nowrap">File d&apos;attente</th>
+                            <th className="px-4 py-4 font-semibold text-right whitespace-nowrap">% en file d&apos;attente</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2123,7 +2083,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
           ) : null}
 
           {reportConfig.charts.trendLine ? (
-            <GlassCard title="Évolution du nombre d'appels par journée" subtitle="Vue d'ensemble du volume total d'appels par jour.">
+            <GlassCard title="Évolution du nombre d&apos;appels par journée" subtitle="Vue d&apos;ensemble du volume total d&apos;appels par jour.">
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={sérieJour}>

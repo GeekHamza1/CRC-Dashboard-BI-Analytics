@@ -12,10 +12,8 @@ import {
 
 import { provincesParRégion } from "@/lib/crc-analytics";
 import {
-  REGION_COLORS,
   REGION_ORDER,
   REGION_SHORT,
-  type CanonicalRegion,
 } from "@/lib/crc-constants";
 import type { CrcRow } from "@/lib/crc-types";
 
