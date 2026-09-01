@@ -33,6 +33,7 @@ export interface CrcRow {
   tempsAttenteQueue: string;
   téléopérateurNote: string;
   téléphone: string;
+  phoneLinesSource: string;
   adresse: string;
   nomPrénom: string;
   nIdentité: string;

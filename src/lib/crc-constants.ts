@@ -64,3 +64,31 @@ export function regionToCanonical(raw: string): CanonicalRegion {
   if (lower.includes("souss") || lower.includes("massa")) return "Souss-Massa";
   return "Inconnu";
 }
+
+/** Normalize phone line source codes to canonical names */
+export function normalizePhoneLinesSource(raw: string): string {
+  const normalized = (raw ?? "").trim();
+  if (!normalized) return "Non spécifié";
+
+  const mappings: Record<string, string> = {
+    "525485258": "SRM Layoune",
+    "525485253": "SRM Drâa Tafilalet",
+    "525485263": "SRM Souss Massa",
+    "528272727": "Radio dipa",
+    "8000": "Radio dipa",
+    "5000": "Telephone d'accueil",
+    "528222222": "Ibis",
+    "528233030": "Siege Agadir",
+  };
+
+  // Try exact match first
+  if (mappings[normalized]) return mappings[normalized];
+
+  // Try substring match for phone codes
+  for (const [code, label] of Object.entries(mappings)) {
+    if (normalized.includes(code)) return label;
+  }
+
+  // Return original if no match
+  return normalized;
+}

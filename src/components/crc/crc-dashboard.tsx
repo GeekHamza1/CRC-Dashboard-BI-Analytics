@@ -50,6 +50,7 @@ import {
   REGION_COLORS,
   REGION_ORDER,
   REGION_SHORT,
+  normalizePhoneLinesSource,
 } from "@/lib/crc-constants";
 import { displayLabel, parseImportedFile } from "@/lib/crc-parser";
 import {
@@ -336,6 +337,15 @@ export default function CrcDashboard() {
       const res = [...new Set(parsed.rows.map((r) => r.résultat))].sort((a, b) =>
         a.localeCompare(b, "fr"),
       );
+      const pls = [...new Set(parsed.rows.map((r) => normalizePhoneLinesSource(r.phoneLinesSource)))].sort((a, b) =>
+        a.localeCompare(b, "fr"),
+      );
+      const met = [...new Set(parsed.rows.map((r) => r.metier))].filter(Boolean).sort((a, b) =>
+        a.localeCompare(b, "fr"),
+      );
+      const prov = [...new Set(parsed.rows.map((r) => r.provinces))].filter(Boolean).sort((a, b) =>
+        a.localeCompare(b, "fr"),
+      );
       /** reset filtres fichier and auto-fill date bounds from data */
       const dates = parsed.rows.map((r) => r.date).filter(Boolean) as Date[];
       const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -345,6 +355,9 @@ export default function CrcDashboard() {
         ...defaultDashboardFilters(),
         téléopérateurs: ops,
         résultats: res,
+        phoneLinesSource: pls,
+        metiers: met,
+        provinces: prov,
         régions: [...REGION_ORDER],
         dateFrom,
         dateTo,
@@ -359,6 +372,9 @@ export default function CrcDashboard() {
   const effectiveFilters = useMemo(() => {
     const téléAll = [...new Set(rows.map((r) => r.téléopérateur))];
     const résAll = [...new Set(rows.map((r) => r.résultat))];
+    const plsAll = [...new Set(rows.map((r) => normalizePhoneLinesSource(r.phoneLinesSource)))];
+    const metAll = [...new Set(rows.map((r) => r.metier))].filter(Boolean);
+    const provAll = [...new Set(rows.map((r) => r.provinces))].filter(Boolean);
     return {
       ...filters,
       téléopérateurs:
@@ -372,6 +388,24 @@ export default function CrcDashboard() {
         filters.résultats.length < résAll.length &&
         résAll.length > 0
           ? filters.résultats
+          : [],
+      phoneLinesSource:
+        filters.phoneLinesSource.length > 0 &&
+        filters.phoneLinesSource.length < plsAll.length &&
+        plsAll.length > 0
+          ? filters.phoneLinesSource
+          : [],
+      metiers:
+        filters.metiers.length > 0 &&
+        filters.metiers.length < metAll.length &&
+        metAll.length > 0
+          ? filters.metiers
+          : [],
+      provinces:
+        filters.provinces.length > 0 &&
+        filters.provinces.length < provAll.length &&
+        provAll.length > 0
+          ? filters.provinces
           : [],
     };
   }, [filters, rows]);
@@ -439,6 +473,15 @@ export default function CrcDashboard() {
     a.localeCompare(b, "fr"),
   );
   const résOptions = [...new Set(rows.map((r) => r.résultat))].sort((a, b) =>
+    a.localeCompare(b, "fr"),
+  );
+  const phoneLinesSourceOptions = [...new Set(rows.map((r) => normalizePhoneLinesSource(r.phoneLinesSource)))].sort((a, b) =>
+    a.localeCompare(b, "fr"),
+  );
+  const metierOptions = [...new Set(rows.map((r) => r.metier))].filter(Boolean).sort((a, b) =>
+    a.localeCompare(b, "fr"),
+  );
+  const provincesOptions = [...new Set(rows.map((r) => r.provinces))].filter(Boolean).sort((a, b) =>
     a.localeCompare(b, "fr"),
   );
   const metierResultatOptions = useMemo(
@@ -686,6 +729,21 @@ const chartTooltip = (
       { name: "Téléphone d'accueil", value: accueilCount },
       { name: "Ligne verte", value: otherCount },
     ].filter((d) => d.value > 0);
+  }, [filteredRows]);
+
+  const phoneLinesSourcePieData = useMemo<{ name: string; value: number }[]>(() => {
+    const sousRows = filteredRows.filter((r) => r.régionCanon === "Souss-Massa");
+    const sourceCounts = new Map<string, number>();
+    
+    sousRows.forEach((r) => {
+      const normalized = normalizePhoneLinesSource(r.phoneLinesSource ?? "");
+      sourceCounts.set(normalized, (sourceCounts.get(normalized) ?? 0) + 1);
+    });
+
+    return Array.from(sourceCounts.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .filter((d) => d.value > 0);
   }, [filteredRows]);
 
 const téléBar = téléopRanking.slice(0, 12).map((o) => ({
@@ -1325,21 +1383,33 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
       {rows.length > 0 && (
         <>
           <GlassCard
-            title="Filtres dashboard"
+            title="Filtres Dashboard"
             subtitle="Segmentation analytique uniquement ; la grille source conserve toutes ses lignes."
             action={
-              <button
-                type="button"
-                onClick={() => setDisplaySettingsOpen(true)}
-                className="rounded-2xl px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white"
-              >
-                Gérer l&apos;affichage
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilters(defaultDashboardFilters());
+                  }}
+                  className="rounded-xl px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                >
+                  Réinitialiser
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDisplaySettingsOpen(true)}
+                  className="rounded-xl px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white transition-colors"
+                >
+                  Affichage
+                </button>
+              </div>
             }
           >
-            <div className="grid gap-4 lg:grid-cols-[1.05fr_minmax(0,1fr)]">
-              <div className="space-y-4">
-                <label className="flex gap-2 text-sm leading-snug">
+            <div className="space-y-6">
+              {/* Validation filter */}
+              <div>
+                <label className="flex gap-3 text-sm leading-snug cursor-pointer group">
                   <input
                     type="checkbox"
                     checked={filters.onlyValid}
@@ -1349,41 +1419,61 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                         onlyValid: e.target.checked,
                       }))
                     }
+                    className="mt-0.5 cursor-pointer"
                   />
-                  <span>Analyser seulement les lignes&nbsp;<strong>validées</strong> (date lisible et au moins une dimension opérationnelle renseignée).</span>
+                  <span className="text-slate-700 dark:text-slate-300">
+                    <strong>Lignes validées uniquement</strong> - date lisible et dimensions opérationnelles renseignées
+                  </span>
                 </label>
+              </div>
 
-                <div>
-                  <p className="text-xs font-bold uppercase text-slate-500 mb-2">Bassins RCC</p>
-                  <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
-                    {REGION_ORDER.map((rg) => (
-                      <label key={rg} className="inline-flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={filters.régions.includes(rg)}
-                          onChange={(e) => {
-                            setFilters((prev) => {
-                              if (e.target.checked)
-                                return { ...prev, régions: [...new Set([...prev.régions, rg])] };
+              {/* Regions filter */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Region</h3>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium">
+                    {filters.régions.length}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {REGION_ORDER.map((rg) => {
+                    const isSelected = filters.régions.includes(rg);
+                    return (
+                      <button
+                        key={rg}
+                        onClick={() => {
+                          setFilters((prev) => {
+                            if (isSelected)
                               return {
                                 ...prev,
                                 régions: prev.régions.filter((x) => x !== rg),
                               };
-                            });
-                          }}
-                        />
-                        <span style={{ color: REGION_COLORS[rg] }}>{REGION_SHORT[rg]}</span>
-                      </label>
-                    ))}
-                  </div>
+                            return { ...prev, régions: [...new Set([...prev.régions, rg])] };
+                          });
+                        }}
+                        style={{
+                          borderColor: REGION_COLORS[rg],
+                          backgroundColor: isSelected ? `${REGION_COLORS[rg]}15` : "transparent",
+                          color: isSelected ? REGION_COLORS[rg] : "currentColor",
+                        }}
+                        className="px-3 py-1.5 rounded-lg border-2 text-xs font-medium transition-all hover:opacity-80"
+                      >
+                        {REGION_SHORT[rg]}
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
 
-                <div>
-                  <p className="text-xs font-bold uppercase text-slate-500 mb-1">Bornes dates</p>
-                  <div className="flex flex-wrap gap-2">
+              {/* Date range filter */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-3">Période d'analyse</h3>
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Début</label>
                     <input
                       type="date"
-                      className="rounded-xl border px-3 py-1.5 text-sm bg-white/80 dark:bg-slate-900/70 dark:border-slate-600"
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-900/60 text-slate-900 dark:text-slate-50"
                       value={filters.dateFrom ?? ""}
                       min={dateBounds.min ?? undefined}
                       max={dateBounds.max ?? undefined}
@@ -1397,9 +1487,12 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                         }));
                       }}
                     />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Fin</label>
                     <input
                       type="date"
-                      className="rounded-xl border px-3 py-1.5 text-sm bg-white/80 dark:bg-slate-900/70 dark:border-slate-600"
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm bg-white dark:bg-slate-900/60 text-slate-900 dark:text-slate-50"
                       value={filters.dateTo ?? ""}
                       min={dateBounds.min ?? undefined}
                       max={dateBounds.max ?? undefined}
@@ -1415,58 +1508,232 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                     />
                   </div>
                 </div>
-
-                <p className="text-[11px] text-slate-500">
-                  Multi-sélection : utilisez CTRL / Maj sur Windows ; CMD sur macOS pour affiner téléopérator / résultat.
-                </p>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400">
-                    Téléopérateurs
-                  </span>
-                  <select
-                    multiple
-                    className="h-52 rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs bg-white/80 dark:bg-slate-950/65"
-                    value={filters.téléopérateurs}
-                    onChange={(e) =>
-                      setFilters((f) => ({
-                        ...f,
-                        téléopérateurs: parseMulti(e.target),
-                      }))
-                    }
-                  >
-                    {téléOptions.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+              {/* Multi-select filters grid */}
+              <div className="grid md:grid-cols-3 gap-4">
+                {/* Téléopérateurs */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Téléopérateurs</h3>
+                    {filters.téléopérateurs.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
+                        {filters.téléopérateurs.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900/30">
+                    {téléOptions.length === 0 ? (
+                      <span className="text-xs text-slate-500 dark:text-slate-400 p-2">Aucune option</span>
+                    ) : (
+                      téléOptions.map((t) => {
+                        const isSelected = filters.téléopérateurs.includes(t);
+                        return (
+                          <button
+                            key={t}
+                            onClick={() => {
+                              setFilters((f) => {
+                                if (isSelected)
+                                  return {
+                                    ...f,
+                                    téléopérateurs: f.téléopérateurs.filter((x) => x !== t),
+                                  };
+                                return { ...f, téléopérateurs: [...f.téléopérateurs, t] };
+                              });
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all ${
+                              isSelected
+                                ? "bg-blue-600 text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
+                            }`}
+                          >
+                            {t}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs uppercase font-semibold text-slate-600 dark:text-slate-400">
-                    Résultat (normalisé)
-                  </span>
-                  <select
-                    multiple
-                    className="h-52 rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs bg-white/80 dark:bg-slate-950/65"
-                    value={filters.résultats}
-                    onChange={(e) =>
-                      setFilters((f) => ({
-                        ...f,
-                        résultats: parseMulti(e.target),
-                      }))
-                    }
-                  >
-                    {résOptions.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
+
+                {/* Résultats */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Résultats</h3>
+                    {filters.résultats.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 font-medium">
+                        {filters.résultats.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900/30">
+                    {résOptions.length === 0 ? (
+                      <span className="text-xs text-slate-500 dark:text-slate-400 p-2">Aucune option</span>
+                    ) : (
+                      résOptions.map((r) => {
+                        const isSelected = filters.résultats.includes(r);
+                        return (
+                          <button
+                            key={r}
+                            onClick={() => {
+                              setFilters((f) => {
+                                if (isSelected)
+                                  return {
+                                    ...f,
+                                    résultats: f.résultats.filter((x) => x !== r),
+                                  };
+                                return { ...f, résultats: [...f.résultats, r] };
+                              });
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all ${
+                              isSelected
+                                ? "bg-green-600 text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
+                            }`}
+                          >
+                            {r}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Source de Ligne Téléphonique */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Source de Ligne</h3>
+                    {filters.phoneLinesSource.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-medium">
+                        {filters.phoneLinesSource.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900/30">
+                    {phoneLinesSourceOptions.length === 0 ? (
+                      <span className="text-xs text-slate-500 dark:text-slate-400 p-2">Aucune option</span>
+                    ) : (
+                      phoneLinesSourceOptions.map((pls) => {
+                        const isSelected = filters.phoneLinesSource.includes(pls);
+                        return (
+                          <button
+                            key={pls}
+                            onClick={() => {
+                              setFilters((f) => {
+                                if (isSelected)
+                                  return {
+                                    ...f,
+                                    phoneLinesSource: f.phoneLinesSource.filter((x) => x !== pls),
+                                  };
+                                return { ...f, phoneLinesSource: [...f.phoneLinesSource, pls] };
+                              });
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all ${
+                              isSelected
+                                ? "bg-purple-600 text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
+                            }`}
+                          >
+                            {pls}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Métier and Province filters */}
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Métier */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Métier</h3>
+                    {filters.metiers.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 font-medium">
+                        {filters.metiers.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900/30">
+                    {metierOptions.length === 0 ? (
+                      <span className="text-xs text-slate-500 dark:text-slate-400 p-2">Aucune option</span>
+                    ) : (
+                      metierOptions.map((m) => {
+                        const isSelected = filters.metiers.includes(m);
+                        return (
+                          <button
+                            key={m}
+                            onClick={() => {
+                              setFilters((f) => {
+                                if (isSelected)
+                                  return {
+                                    ...f,
+                                    metiers: f.metiers.filter((x) => x !== m),
+                                  };
+                                return { ...f, metiers: [...f.metiers, m] };
+                              });
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all ${
+                              isSelected
+                                ? "bg-orange-600 text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Province */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Province</h3>
+                    {filters.provinces.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 font-medium">
+                        {filters.provinces.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900/30">
+                    {provincesOptions.length === 0 ? (
+                      <span className="text-xs text-slate-500 dark:text-slate-400 p-2">Aucune option</span>
+                    ) : (
+                      provincesOptions.map((p) => {
+                        const isSelected = filters.provinces.includes(p);
+                        return (
+                          <button
+                            key={p}
+                            onClick={() => {
+                              setFilters((f) => {
+                                if (isSelected)
+                                  return {
+                                    ...f,
+                                    provinces: f.provinces.filter((x) => x !== p),
+                                  };
+                                return { ...f, provinces: [...f.provinces, p] };
+                              });
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-all ${
+                              isSelected
+                                ? "bg-red-600 text-white"
+                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                💡 Cliquez sur les éléments pour ajouter/retirer des filtres. Les compteurs indiquent le nombre de filtres actifs par catégorie.
+              </p>
             </div>
           </GlassCard>
 
@@ -1569,23 +1836,6 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                 </div>
               </GlassCard>
             ) : null}
-            {reportConfig.charts.geoDonut ? (
-              <GlassCard title="Répartition géographique" subtitle={REGION_ORDER.map((r) => REGION_SHORT[r]).join(" • ")}>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={donutRég} dataKey="value" innerRadius={48} outerRadius={98} stroke="none">
-                        {donutRég.map((d, idx) => (
-                          <Cell key={idx} fill={d.fill} />
-                        ))}
-                      </Pie>
-                      <Legend formatter={(value) => <span style={{ color: palette.fg }}>{value}</span>} />
-                      {chartTooltip}
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </GlassCard>
-            ) : null}
             {reportConfig.charts.statusPie ? (
               <GlassCard title="Répartition des résultats des appels" subtitle="Couleurs Résultat figées sur tout le dashboard">
                 <div className="h-72">
@@ -1603,14 +1853,14 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                 </div>
               </GlassCard>
             ) : null}
-            {reportConfig.charts.soussPhonePie ? (
+            {reportConfig.charts.soussPhonePie && phoneLinesSourcePieData.length > 0 ? (
               <div className="xl:col-span-3">
-                <GlassCard className="w-full" title="Appels Souss-Massa" subtitle="Répartition par téléphone ligne Verte / Ligne Analogique DPIA">
+                <GlassCard className="w-full" title="Ligne téléphonique" subtitle="Répartition par source de ligne téléphonique">
                   <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={sousAsteriskPieData}
+                          data={phoneLinesSourcePieData}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -1618,7 +1868,7 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                           outerRadius={120}
                           stroke="none"
                         >
-                          {sousAsteriskPieData.map((d, idx) => (
+                          {phoneLinesSourcePieData.map((d, idx) => (
                             <Cell key={d.name} fill={palette.series[idx % palette.series.length]} />
                           ))}
                         </Pie>
@@ -1630,68 +1880,48 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                 </GlassCard>
               </div>
             ) : null}
+            {reportConfig.charts.soussPhonePie && phoneLinesSourcePieData.length > 0 ? (
+              <div className="xl:col-span-3">
+                <GlassCard className="w-full" title="Récapitulatif" subtitle="Détail de la répartition par source de ligne téléphonique">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 dark:border-slate-700">
+                          <th className="text-left py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">Source de Ligne</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">Nombre d'Appels</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">Pourcentage</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {phoneLinesSourcePieData.map((row) => {
+                          const total = phoneLinesSourcePieData.reduce((sum, d) => sum + d.value, 0);
+                          const percentage = total > 0 ? ((row.value / total) * 100).toFixed(2) : "0.00";
+                          return (
+                            <tr key={row.name} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                              <td className="py-2 px-3 text-slate-900 dark:text-slate-100">{row.name}</td>
+                              <td className="text-right py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{row.value.toLocaleString("fr-FR")}</td>
+                              <td className="text-right py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{percentage}%</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30">
+                          <td className="py-2 px-3 font-semibold text-slate-900 dark:text-slate-100">Total</td>
+                          <td className="text-right py-2 px-3 font-semibold text-slate-900 dark:text-slate-100">{phoneLinesSourcePieData.reduce((sum, d) => sum + d.value, 0).toLocaleString("fr-FR")}</td>
+                          <td className="text-right py-2 px-3 font-semibold text-slate-900 dark:text-slate-100">100.00%</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </GlassCard>
+              </div>
+            ) : null}
           </div>
 
           {reportConfig.charts.provincesPie ? (
             <CrcProvincesPieWidget rows={filteredRows} palette={palette} />
           ) : null}
-
-          {(reportConfig.charts.dailyArea || reportConfig.charts.monthlyBars) && (
-            <div className="grid xl:grid-cols-2 gap-4">
-              {reportConfig.charts.dailyArea ? (
-                <GlassCard title="Évolution des appels par région" subtitle="Comparez le nombre d'appels de chaque région au fil des journées.">
-                  <div className="h-[340px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={sérieJour}>
-                        <CartesianGrid stroke={palette.grid} strokeDasharray="4 8" vertical={false} />
-                        <XAxis hide={sérieJour.length > 30} tick={{ fill: palette.muted, fontSize: 10 }} dataKey="jour" />
-                        <YAxis tick={{ fill: palette.muted }} />
-                        <Legend />
-                        {chartTooltip}
-                        {visibleRegions.map((rg) => (
-                          <Area
-                            key={rg}
-                            type="monotone"
-                            stackId="r"
-                            dataKey={REGION_SHORT[rg]}
-                            stroke={REGION_COLORS[rg]}
-                            fill={`${REGION_COLORS[rg]}73`}
-                          />
-                        ))}
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </GlassCard>
-              ) : null}
-
-              {reportConfig.charts.monthlyBars ? (
-                <GlassCard title="Nombre d'appels par mois et par région" subtitle="Comparez le volume d'appels de chaque région pour chaque mois.">
-                  <div className="h-[340px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={sérieMois}>
-                        <CartesianGrid stroke={palette.grid} strokeDasharray="4 8" vertical={false} />
-                        <XAxis
-                          dataKey="mois"
-                          interval={0}
-                          angle={-15}
-                          textAnchor="end"
-                          height={70}
-                          tick={{ fontSize: 12 }}
-                        />
-                        {/* <XAxis hide={sérieMois.length > 22} tick={{ fill: palette.muted, fontSize: 10 }} dataKey="mois" /> */}
-                        <YAxis tick={{ fill: palette.muted }} />
-                        <Legend />
-                        {chartTooltip}
-                        {visibleRegions.map((rg) => (
-                          <Bar key={rg} stackId="m" dataKey={REGION_SHORT[rg]} fill={REGION_COLORS[rg]} />
-                        ))}
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </GlassCard>
-              ) : null}
-            </div>
-          )}
 
           {reportConfig.charts.shiftBars ? (
             <GlassCard title="Répartition shifts horaires" subtitle="Volumes d’appels par tranche horaire">

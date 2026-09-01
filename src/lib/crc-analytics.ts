@@ -4,6 +4,7 @@ import {
   REGION_COLORS,
   REGION_ORDER,
   REGION_SHORT,
+  normalizePhoneLinesSource,
   type CanonicalRegion,
 } from "./crc-constants";
 import { normalizeResult, normalizeResultKey } from "./crc-normalize-result";
@@ -17,6 +18,9 @@ export interface DashboardFilters {
   régions: CanonicalRegion[];
   téléopérateurs: string[];
   résultats: string[];
+  phoneLinesSource: string[];
+  metiers: string[];
+  provinces: string[];
   dateFrom: string | null;
   dateTo: string | null;
 }
@@ -26,6 +30,9 @@ export const defaultDashboardFilters = (): DashboardFilters => ({
   régions: [...REGION_ORDER],
   téléopérateurs: [],
   résultats: [],
+  phoneLinesSource: [],
+  metiers: [],
+  provinces: [],
   dateFrom: null,
   dateTo: null,
 });
@@ -80,6 +87,12 @@ export function applyFilters(rows: CrcRow[], f: DashboardFilters): CrcRow[] {
       const keep = f.résultats.some((sel) => normalizeResult(sel) === rowCanon);
       if (!keep) return false;
     }
+    if (f.phoneLinesSource.length) {
+      const normalized = normalizePhoneLinesSource(r.phoneLinesSource);
+      if (!f.phoneLinesSource.includes(normalized)) return false;
+    }
+    if (f.metiers.length && !f.metiers.includes(r.metier)) return false;
+    if (f.provinces.length && !f.provinces.includes(r.provinces)) return false;
     if (r.date) {
       const d = ymd(r.date);
       if (f.dateFrom && d < f.dateFrom) return false;

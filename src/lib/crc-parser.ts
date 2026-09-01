@@ -27,6 +27,7 @@ type RowField =
   | "tempsAttenteQueue"
   | "téléopérateurNote"
   | "téléphone"
+  | "phoneLinesSource"
   | "adresse"
   | "nomPrénom"
   | "nIdentité"
@@ -77,6 +78,10 @@ const FIELD_SYNONYMS: { field: RowField; match: RegExp[] }[] = [
   {
     field: "téléphone",
     match: [/^header\/?téléphone$/i, /^téléphone$/i],
+  },
+  {
+    field: "phoneLinesSource",
+    match: [/^header\/?région$/i, /^phones?\s*lines?\s*source$/i],
   },
   { field: "adresse", match: [/^header\/?adresse$/i, /^adresse$/i] },
   {
@@ -463,6 +468,7 @@ rawDateText: stringifyCell(rawDateCell ?? ""),
       tempsAttenteQueue: emptyFallback(rec.tempsAttenteQueue, false),
       téléopérateurNote: emptyFallback(rec.téléopérateurNote, false),
       téléphone: emptyFallback(rec.téléphone, false),
+      phoneLinesSource: emptyFallback(rec.phoneLinesSource, false),
       adresse: emptyFallback(rec.adresse, false),
       nomPrénom: emptyFallback(rec.nomPrénom, false),
       nIdentité: emptyFallback(rec.nIdentité, false),
