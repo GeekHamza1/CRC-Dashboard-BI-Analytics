@@ -1367,26 +1367,6 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
             }
           >
             <div className="space-y-6">
-              {/* Validation filter */}
-              <div>
-                <label className="flex gap-3 text-sm leading-snug cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={filters.onlyValid}
-                    onChange={(e) =>
-                      setFilters((f) => ({
-                        ...f,
-                        onlyValid: e.target.checked,
-                      }))
-                    }
-                    className="mt-0.5 cursor-pointer"
-                  />
-                  <span className="text-slate-700 dark:text-slate-300">
-                    <strong>Lignes validées uniquement</strong> - date lisible et dimensions opérationnelles renseignées
-                  </span>
-                </label>
-              </div>
-
               {/* Regions filter */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
@@ -1395,12 +1375,14 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                     {filters.régions.length}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {REGION_ORDER.map((rg) => {
                     const isSelected = filters.régions.includes(rg);
                     return (
                       <button
                         key={rg}
+                        type="button"
+                        aria-pressed={isSelected}
                         onClick={() => {
                           setFilters((prev) => {
                             if (isSelected)
@@ -1413,11 +1395,23 @@ const téléBar = téléopRanking.slice(0, 12).map((o) => ({
                         }}
                         style={{
                           borderColor: REGION_COLORS[rg],
-                          backgroundColor: isSelected ? `${REGION_COLORS[rg]}15` : "transparent",
-                          color: isSelected ? REGION_COLORS[rg] : "currentColor",
+                          backgroundColor: isSelected ? REGION_COLORS[rg] : "transparent",
+                          color: isSelected ? "#ffffff" : REGION_COLORS[rg],
                         }}
-                        className="px-3 py-1.5 rounded-lg border-2 text-xs font-medium transition-all hover:opacity-80"
+                        className={`inline-flex min-h-10 items-center gap-2 rounded-xl border-2 px-4 py-2 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100 dark:focus-visible:ring-offset-slate-950 ${
+                          isSelected
+                            ? "shadow-md"
+                            : "bg-white dark:bg-slate-900/80"
+                        }`}
                       >
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] leading-none ${
+                            isSelected ? "border-white bg-white/20" : "border-current"
+                          }`}
+                        >
+                          {isSelected ? "✓" : ""}
+                        </span>
                         {REGION_SHORT[rg]}
                       </button>
                     );
